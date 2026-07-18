@@ -84,5 +84,3 @@ export default defineConfig([
 ])
 
 ```
-## Developer
-**Developed by Shubham Sakhare**
