@@ -2,7 +2,7 @@
   <img src="assets/VSmart-AI-desktop-assistant.png" width="900"/>
 </p>
 
-Dveloped by Shubham Sakhare
+# Developed by Shubham Sakhare
 
 # React + TypeScript + Vite
 
