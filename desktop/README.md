@@ -1,3 +1,14 @@
+<p align="center">
+  <img src="assets/VSmart-AI-desktop-assistant.png" width="900"/>
+</p>
+
+# VSmart AI
+
+Desktop AI Assistant built with Electron, React and TypeScript.
+
+
+
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
@@ -73,6 +84,3 @@ export default defineConfig([
 ])
 
 ```
-## Developer
-
-**Developed by Shubham Sakhare**
