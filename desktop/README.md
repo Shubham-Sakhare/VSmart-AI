@@ -1,6 +1,7 @@
 <p align="center">
-  <img src="./desktop/src/assets/vsmart-ai-images/VSmart-AI-desktop-assistant.png" width="900"/>
+  <img src="./src/assets/vsmart-ai-images/VSmart-AI-desktop-assistant.png" width="900"/>
 </p>
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
