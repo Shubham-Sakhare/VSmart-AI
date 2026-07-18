@@ -1,0 +1,357 @@
+.command-center{
+    display:flex;
+    flex-direction:column;
+    gap:20px;
+}
+
+.cc-row{
+    display:grid;
+    gap:20px;
+}
+
+.cc-row-top{
+    grid-template-columns:1fr 1.4fr 1fr;
+}
+
+.cc-row-mid{
+    grid-template-columns:1.2fr 1fr 0.8fr;
+}
+
+.cc-row-bottom{
+    grid-template-columns:1fr 1fr 1fr;
+}
+
+.cc-card{
+    background:rgba(8,20,38,.65);
+    border:1px solid rgba(0,255,255,.12);
+    border-radius:18px;
+    padding:20px;
+    backdrop-filter:blur(14px);
+}
+
+.cc-card h3{
+    font-size:12px;
+    letter-spacing:2px;
+    color:#00e5ff;
+    margin-bottom:14px;
+}
+
+.card-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:14px;
+}
+
+.card-header h3{
+    margin-bottom:0;
+}
+
+.live-dot{
+    font-size:10px;
+    color:#00ff80;
+    border:1px solid rgba(0,255,128,.4);
+    padding:2px 8px;
+    border-radius:10px;
+}
+
+/* AI Core Overview */
+.overview-item{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:9px 0;
+    color:#bfefff;
+    font-size:13px;
+    border-bottom:1px solid rgba(255,255,255,.05);
+}
+
+.overview-item span{ flex:1; }
+
+.overview-item em{
+    font-style:normal;
+    font-size:12px;
+    color:#7fb8cc;
+}
+
+.overview-item em.ok{ color:#00ff9c; }
+
+/* Orb card */
+.orb-card{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    position:relative;
+    min-height:220px;
+}
+
+.globe-wrap{
+    position:relative;
+    width:100px;
+    height:100px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    margin-bottom:14px;
+}
+
+.globe-core{
+    width:60px;
+    height:60px;
+    border-radius:50%;
+    background:radial-gradient(circle,#00f2ff,#0090b0 70%);
+    box-shadow:0 0 40px rgba(0,229,255,.6);
+}
+
+.globe-ring{
+    position:absolute;
+    border:1px solid rgba(0,229,255,.35);
+    border-radius:50%;
+}
+
+.globe-ring.r1{ width:70px;height:70px; animation:spin 6s linear infinite; }
+.globe-ring.r2{ width:88px;height:88px; animation:spin 10s linear infinite reverse; }
+.globe-ring.r3{ width:100px;height:100px; animation:spin 14s linear infinite; }
+
+@keyframes spin{
+    from{ transform:rotate(0deg); }
+    to{ transform:rotate(360deg); }
+}
+
+.orb-card h1{
+    font-size:26px;
+    letter-spacing:6px;
+    color:white;
+    margin-top:6px;
+}
+
+.orb-card p{
+    font-size:11px;
+    letter-spacing:3px;
+    color:#7fd9ee;
+}
+
+.core-version{
+    color:#00e5ff;
+}
+
+.last-reply{
+    margin-top:12px;
+    font-size:12px;
+    color:#bfefff;
+    opacity:.8;
+    font-style:italic;
+    max-width:260px;
+}
+
+/* Intel feed */
+.feed-item{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    padding:8px 0;
+    color:#cdeeff;
+    font-size:12px;
+    border-bottom:1px solid rgba(255,255,255,.05);
+}
+
+.feed-item p{ margin-bottom:3px; }
+
+.feed-tag{
+    font-size:10px;
+    padding:1px 7px;
+    border-radius:8px;
+    opacity:.8;
+}
+
+.tag-meeting{ background:rgba(0,229,255,.12); }
+.tag-overdue{ background:rgba(255,80,80,.15); color:#ff8080; }
+.tag-github{ background:rgba(0,229,255,.12); }
+.tag-focus{ background:rgba(255,220,80,.12); color:#ffdc80; }
+
+/* Active agents */
+.agents-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+}
+
+.agent-tile{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:12px;
+    border-radius:12px;
+    background:rgba(0,229,255,.05);
+    border:1px solid rgba(0,255,255,.1);
+    font-size:12px;
+    color:#cdeeff;
+}
+
+.agent-tile span{ flex:1; }
+
+.dot-online, .dot-idle{
+    width:8px;
+    height:8px;
+    border-radius:50%;
+}
+
+.dot-online{ background:#00ff80; box-shadow:0 0 8px #00ff80; }
+.dot-idle{ background:#5a7a8a; }
+
+/* Timeline */
+.timeline-item{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:8px 0;
+    font-size:12px;
+    color:#cdeeff;
+    border-bottom:1px solid rgba(255,255,255,.05);
+}
+
+.tl-time{ width:60px; opacity:.6; }
+
+.tl-dot{
+    width:6px;
+    height:6px;
+    border-radius:50%;
+    background:#00e5ff;
+}
+
+.tl-title{ flex:1; }
+
+.tl-status{ opacity:.6; font-size:11px; }
+
+/* Quick commands */
+.quick-cmds{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+}
+
+.quick-cmds button{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:12px 14px;
+    border-radius:12px;
+    background:rgba(0,229,255,.06);
+    border:1px solid rgba(0,255,255,.12);
+    color:#cdeeff;
+    cursor:pointer;
+    font-size:13px;
+    transition:.3s;
+}
+
+.quick-cmds button:hover{
+    background:rgba(0,229,255,.15);
+    box-shadow:0 0 15px rgba(0,229,255,.2);
+}
+
+/* Gauges */
+.gauges{
+    display:flex;
+    justify-content:space-around;
+}
+
+.gauge{
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+}
+
+.gauge svg{
+    width:80px;
+    height:80px;
+    transform:rotate(-90deg);
+}
+
+.gauge-track{
+    fill:none;
+    stroke:rgba(255,255,255,.08);
+    stroke-width:6;
+}
+
+.gauge-fill{
+    fill:none;
+    stroke:#00e5ff;
+    stroke-width:6;
+    stroke-linecap:round;
+    transition:stroke-dashoffset .6s ease;
+}
+
+.gauge-center{
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    font-size:13px;
+    color:white;
+}
+
+.gauge-label{
+    margin-top:6px;
+    font-size:11px;
+    color:#7fb8cc;
+}
+
+/* Memory insights */
+.memory-stats{
+    display:flex;
+    justify-content:space-around;
+    text-align:center;
+}
+
+.memory-stats strong{
+    display:block;
+    font-size:20px;
+    color:#00e5ff;
+}
+
+.memory-stats span{
+    font-size:11px;
+    color:#7fb8cc;
+}
+
+/* LLM status */
+.llm-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+}
+
+.llm-item{
+    padding:10px;
+    border-radius:10px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    font-size:12px;
+    color:#cdeeff;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+}
+
+.llm-item em{
+    font-style:normal;
+    font-size:10px;
+    color:#7fb8cc;
+}
+
+.llm-item.linked{
+    border-color:rgba(0,255,128,.3);
+}
+
+.llm-item.linked em{
+    color:#00ff9c;
+}
+
+@media (max-width:1200px){
+    .cc-row-top, .cc-row-mid, .cc-row-bottom{
+        grid-template-columns:1fr;
+    }
+}

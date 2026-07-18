@@ -1,0 +1,135 @@
+.orb-wrapper {
+  position: relative;
+  width: 340px;
+  height: 340px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.orb-core {
+  position: relative;
+  width: 170px;
+  height: 170px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  background: radial-gradient(circle, #18d8ff 0%, #0d3d6a 60%, #05111d 100%);
+  box-shadow:
+    0 0 25px #00eaff,
+    0 0 60px rgba(0, 255, 255, .5),
+    inset 0 0 30px rgba(255,255,255,.15);
+  animation: corePulse 4s ease-in-out infinite;
+}
+
+.orb-text {
+  font-size: 72px;
+  font-weight: 700;
+  color: white;
+  letter-spacing: 3px;
+  z-index: 2;
+}
+
+.orb-glow {
+  position: absolute;
+  width: 230px;
+  height: 230px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,255,255,.45), transparent 70%);
+  animation: glowRotate 8s linear infinite;
+}
+
+.orb-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid rgba(0,255,255,.25);
+}
+
+.ring-1 {
+  width: 220px;
+  height: 220px;
+  animation: rotateClock 10s linear infinite;
+}
+
+.ring-2 {
+  width: 270px;
+  height: 270px;
+  border-style: dashed;
+  animation: rotateAnti 14s linear infinite;
+}
+
+.ring-3 {
+  width: 320px;
+  height: 320px;
+  border-color: rgba(0,255,255,.12);
+  animation: pulseRing 5s ease-in-out infinite;
+}
+
+.orb-shadow {
+  position: absolute;
+  width: 250px;
+  height: 35px;
+  bottom: 30px;
+  border-radius: 50%;
+  background: rgba(0,255,255,.15);
+  filter: blur(20px);
+}
+
+@keyframes rotateClock {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes rotateAnti {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes glowRotate {
+  from {
+    transform: rotate(0deg) scale(1);
+  }
+  to {
+    transform: rotate(360deg) scale(1.1);
+  }
+}
+
+@keyframes corePulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow:
+      0 0 25px #00eaff,
+      0 0 60px rgba(0,255,255,.45);
+  }
+
+  50% {
+    transform: scale(1.06);
+    box-shadow:
+      0 0 45px #00ffff,
+      0 0 100px rgba(0,255,255,.8);
+  }
+}
+
+@keyframes pulseRing {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: .6;
+  }
+
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
