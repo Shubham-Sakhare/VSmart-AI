@@ -3,6 +3,7 @@ import { createMainWindow } from "./windows/mainWindow.js";
 import { registerWindowIPC } from "./ipc/window.js";
 import { registerMemoryIPC } from "./ipc/memory.js";
 import { openApplication } from "./services/systemService.js";
+import { writeAndOpenCode } from "./services/codeWriterService.js";
 import { registerSystemIPC } from "./ipc/system.js";
 import { registerVoiceIPC } from "./ipc/voice.js";
 import { initVosk } from "./services/voskService.js";
@@ -40,6 +41,15 @@ app.whenReady().then(() => {
     async (_, appName:string)=>{
 
       return await openApplication(appName);
+
+    }
+  );
+
+  ipcMain.handle(
+    "write-code",
+    async (_, code: string, language?: string) => {
+
+      return await writeAndOpenCode(code, language);
 
     }
   );

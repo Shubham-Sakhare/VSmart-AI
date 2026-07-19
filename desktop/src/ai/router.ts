@@ -2,6 +2,9 @@ import { planner } from "./planner";
 import { memoryAgent } from "../agents/memoryAgent";
 import { chatAgent } from "../agents/chatAgent";
 import { systemAgent } from "../agents/systemAgent";
+// import { codingAgent } from "../agents/codingAgent";
+import { codingAgent } from "../agents/codingAgent";
+import { speak } from "../app/voice/useVoice";
 import type { Plan } from "./types";
 
 
@@ -40,23 +43,34 @@ export async function route(
       };
     }
 
-    case "system":
+    case "system": {
+      // Jarvis-style acknowledgment BEFORE the action runs, then a short
+      // confirmation after — instead of one long delayed reply.
+      speak(`Ok Boss, opening ${command}...`);
+
+      const result = await systemAgent(command);
+
       return {
         success: true,
         action: "system.open",
-        message: await systemAgent(command)
+        message: `${result} What else can I do for you, Boss?`
       };
+    }
 
-    case "browser":
+    case "coding": {
+      speak("Ok Boss, writing that code for you...");
+
+      const result = await codingAgent(command);
+
       return {
         success: true,
-        action: "browser.search",
-        data: { query: command }
+        action: "coding.write",
+        message: `${result} What else can I do for you, Boss?`
       };
+    }
 
     case "chat":
     default: {
-
       const reply = await chatAgent(message);
 
       return {
@@ -64,7 +78,6 @@ export async function route(
         action: "chat",
         message: reply
       };
-
     }
   }
 }

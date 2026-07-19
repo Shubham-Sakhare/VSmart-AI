@@ -187,15 +187,26 @@ export function speak(text: string, lang = "en-IN") {
     const voices = window.speechSynthesis.getVoices();
     if (!voices.length) return;
 
-    const femaleNames = ["heera", "priya", "kalpana", "veena", "raveena", "indian female"];
+    // Newer Windows 11 "Natural"/Neural voices sound far clearer than the
+    // legacy SAPI voices (Heera) — prefer them if installed.
+    const naturalNames = ["neerja", "swara"];
+    const legacyFemaleNames = ["heera", "priya", "kalpana", "veena", "raveena", "indian female"];
 
-    const indianFemale =
-      voices.find(v => v.lang?.toLowerCase() === "en-in" && femaleNames.some(n => v.name.toLowerCase().includes(n))) ||
+    const naturalVoice =
+      voices.find(v => naturalNames.some(n => v.name.toLowerCase().includes(n)) &&
+        (v.lang?.toLowerCase() === "en-in" || v.lang?.toLowerCase() === "hi-in"));
+
+    const legacyVoice =
+      voices.find(v => v.lang?.toLowerCase() === "en-in" && legacyFemaleNames.some(n => v.name.toLowerCase().includes(n))) ||
       voices.find(v => v.lang?.toLowerCase() === "en-in" && v.name.toLowerCase().includes("female")) ||
       voices.find(v => v.lang?.toLowerCase() === "en-in") ||
       voices.find(v => v.lang?.toLowerCase() === "hi-in");
 
-    if (indianFemale) utterance.voice = indianFemale;
+    const chosen = naturalVoice ?? legacyVoice;
+    if (chosen) {
+      utterance.voice = chosen;
+      utterance.lang = chosen.lang;
+    }
   };
 
   if (window.speechSynthesis.getVoices().length) {

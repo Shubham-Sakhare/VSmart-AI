@@ -1,22 +1,21 @@
 import type { Plan } from "./types";
 import { detectIntent } from "./intent";
 
-export async function planner(
-  text: string
-): Promise<Plan> {
+// Words that just mean "do this action" — strip them out to find the actual target.
+const FILLER_WORDS = [
+  "open", "khol", "kholo", "khol do", "shuru karo", "start",
+  "please", "kripya", "karo", "kar do", "kar de", "do", "de"
+];
+
+export async function planner(text: string): Promise<Plan> {
 
   const intent = detectIntent(text);
 
   let command = text.trim();
 
   switch (intent) {
-
-    case "browser":
-      command = extractBrowserCommand(text);
-      break;
-
     case "system":
-      command = extractSystemCommand(text);
+      command = extractTarget(text);
       break;
 
     case "memory":
@@ -24,46 +23,33 @@ export async function planner(
       break;
 
     case "file":
-      command = extractFileCommand(text);
+      command = extractTarget(text);
+      break;
+
+    case "coding":
+      // Keep the full sentence for coding — the LLM needs the whole context
+      // to generate the right code, not just the trigger words stripped out.
+      command = text.trim();
       break;
 
     default:
       command = text;
   }
 
-  return {
-    intent,
-    command
-  };
+  return { intent, command };
 }
 
-function extractBrowserCommand(text: string) {
+/** Strips filler/trigger words from anywhere in the sentence, leaving the target (app/site name). */
+function extractTarget(text: string): string {
+  let result = text.toLowerCase();
 
-  return text
-    .replace(/open/i, "")
-    .replace(/search/i, "")
-    .trim();
+  for (const word of FILLER_WORDS) {
+    result = result.replace(new RegExp(`\\b${word}\\b`, "gi"), " ");
+  }
 
-}
-
-function extractSystemCommand(text: string) {
-
-  return text
-    .replace(/open/i, "")
-    .trim();
-
+  return result.replace(/\s+/g, " ").trim();
 }
 
 function extractMemoryCommand(text: string) {
-
   return text.trim();
-
-}
-
-function extractFileCommand(text: string) {
-
-  return text
-    .replace(/open/i, "")
-    .trim();
-
 }

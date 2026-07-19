@@ -1,4 +1,4 @@
-import "./bottombar.css";
+﻿import "./bottombar.css";
 import { MapPin, CloudSun, Wifi, PlayCircle } from "lucide-react";
 import type { VoiceControls } from "../../voice/useVoice";
 
@@ -26,7 +26,7 @@ export default function BottomBar({ voice }: BottomBarProps) {
       <div className="bottombar-pill">
         <CloudSun size={14} />
         <span>Weather</span>
-        <strong>—</strong>
+        <strong>-</strong>
       </div>
 
       <div className="bottombar-pill">

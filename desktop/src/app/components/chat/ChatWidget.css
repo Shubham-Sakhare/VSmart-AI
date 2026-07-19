@@ -1,0 +1,119 @@
+.chat-widget{
+
+    position:fixed;
+    bottom:100px;
+    right:24px;
+
+    width:400px;
+    height:560px;
+
+    display:flex;
+    flex-direction:column;
+
+    background:linear-gradient(180deg,rgba(6,16,30,.92),rgba(3,8,16,.96));
+    border:1px solid rgba(0,229,255,.22);
+    border-radius:18px;
+
+    box-shadow:0 10px 50px rgba(0,0,0,.5), 0 0 40px rgba(0,229,255,.12);
+    backdrop-filter:blur(20px);
+
+    z-index:200;
+
+    overflow:hidden;
+
+    animation:widget-in .22s ease;
+
+}
+
+@keyframes widget-in{
+    from{ opacity:0; transform:translateY(16px) scale(.97); }
+    to{ opacity:1; transform:translateY(0) scale(1); }
+}
+
+.chat-widget.minimized{
+    height:auto;
+}
+
+.chat-widget-header{
+
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+
+    padding:12px 14px;
+
+    background:rgba(0,229,255,.05);
+    border-bottom:1px solid rgba(0,229,255,.14);
+
+    cursor:default;
+
+}
+
+.chat-widget-title{
+
+    display:flex;
+    align-items:center;
+    gap:8px;
+
+    font-size:13px;
+    font-weight:600;
+    letter-spacing:.5px;
+    color:#8fdfff;
+
+}
+
+.chat-widget-controls{
+    display:flex;
+    gap:6px;
+}
+
+.widget-btn{
+
+    width:26px;
+    height:26px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    border-radius:8px;
+    border:1px solid rgba(0,229,255,.15);
+    background:rgba(0,229,255,.06);
+    color:#8fdfff;
+    cursor:pointer;
+
+    transition:.2s;
+
+}
+
+.widget-btn:hover{
+    background:rgba(0,229,255,.16);
+}
+
+.widget-btn.close:hover{
+    background:rgba(255,80,80,.2);
+    border-color:rgba(255,80,80,.4);
+    color:#ff8080;
+}
+
+.chat-widget-body{
+    flex:1;
+    min-height:0;
+    display:flex;
+}
+
+/* Override ChatPanel's standalone-page sizing so it fits inside the widget shell */
+.chat-widget-body .chat-panel{
+    width:100%;
+    max-width:none;
+    height:100%;
+    margin:0;
+    border:none;
+    border-radius:0;
+    box-shadow:none;
+    background:transparent;
+}
+
+.chat-widget-body .chat-header{
+    display:none;
+}
