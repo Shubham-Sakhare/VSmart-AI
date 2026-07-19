@@ -41,11 +41,11 @@ align-items:center;
 font-size:24px;
 font-weight:bold;
 
-background:linear-gradient(135deg,#00e5ff,#00ffd5);
+background:linear-gradient(135deg,#00e5ff,#a855f7);
 
 color:#000;
 
-box-shadow:0 0 25px cyan;
+box-shadow:0 0 25px rgba(0,229,255,.5);
 
 }
 
@@ -263,7 +263,7 @@ box-shadow:0 0 20px rgba(0,255,255,.2);
 
 .menu-item.active{
 
-background:linear-gradient(90deg,#00c8ff33,#00ffd522);
+background:linear-gradient(90deg,#00c8ff33,#a855f733);
 
 border:1px solid #00d9ff;
 

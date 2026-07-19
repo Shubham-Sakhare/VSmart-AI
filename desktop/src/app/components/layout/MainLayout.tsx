@@ -1,9 +1,10 @@
 import { useState } from "react";
+import { MessageSquare } from "lucide-react";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
-import BottomBar from "./Bottombar";
+import BottomBar from "./BottomBar";
 import CommandCenter from "../dashboard/CommandCenter";
-import ChatPanel from "../chat/ChatPanel";
+import ChatWidget from "../chat/ChatWidget";
 import { askVSmart } from "../../../core/aiEngine";
 import { useVoice, speak } from "../../voice/useVoice";
 import "./layout.css";
@@ -37,9 +38,16 @@ export default function MainLayout() {
 
   const [activePage, setActivePage] = useState<Page>("dashboard");
   const [messages, setMessages] = useState<Message[]>([]);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatMinimized, setChatMinimized] = useState(false);
 
   const sendCommand = async (text: string) => {
     if (!text.trim()) return;
+
+    // Surface the chat popup whenever a command runs (voice or text),
+    // so the user can see the exchange without hunting for it.
+    setChatOpen(true);
+    setChatMinimized(false);
 
     setMessages(prev => [...prev, { sender: "You", text }]);
 
@@ -50,15 +58,22 @@ export default function MainLayout() {
   };
 
   // Single global mic instance — shared by the sidebar status card,
-  // the bottom "Talk to VSmart" bar, and the Conversations page.
+  // the bottom "Talk to VSmart" bar, and the chat popup.
   const voice = useVoice({ onCommand: sendCommand });
+
+  const handleNavigate = (page: Page) => {
+    if (page === "conversations") {
+      setChatOpen(true);
+      setChatMinimized(false);
+      return;
+    }
+    setActivePage(page);
+  };
 
   const renderPage = () => {
     switch (activePage) {
       case "dashboard":
         return <CommandCenter messages={messages} voice={voice} />;
-      case "conversations":
-        return <ChatPanel messages={messages} onSend={sendCommand} voice={voice} />;
       case "aicore":
         return <ComingSoon label="AI Core" />;
       case "agents":
@@ -85,7 +100,7 @@ export default function MainLayout() {
 
       <div className="layout-row">
 
-        <Sidebar activePage={activePage} onNavigate={setActivePage} voice={voice} />
+        <Sidebar activePage={activePage} onNavigate={handleNavigate} voice={voice} />
 
         <main className="main-content">
           <Topbar />
@@ -97,6 +112,22 @@ export default function MainLayout() {
       </div>
 
       <BottomBar voice={voice} />
+
+      <ChatWidget
+        open={chatOpen}
+        minimized={chatMinimized}
+        messages={messages}
+        onSend={sendCommand}
+        voice={voice}
+        onMinimizeToggle={() => setChatMinimized(prev => !prev)}
+        onClose={() => setChatOpen(false)}
+      />
+
+      {!chatOpen && (
+        <button className="chat-launcher" onClick={() => setChatOpen(true)} title="Open chat">
+          <MessageSquare size={22} />
+        </button>
+      )}
 
     </div>
   );

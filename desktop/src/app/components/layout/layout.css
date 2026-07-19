@@ -30,6 +30,37 @@
     font-size:16px;
 }
 
+.chat-launcher{
+
+    position:fixed;
+    bottom:100px;
+    right:24px;
+
+    width:56px;
+    height:56px;
+    border-radius:50%;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    background:linear-gradient(135deg,#00c8ff,#00ffd5);
+    border:none;
+    color:#04141c;
+    cursor:pointer;
+
+    box-shadow:0 6px 24px rgba(0,229,255,.4);
+    z-index:150;
+
+    transition:.25s;
+
+}
+
+.chat-launcher:hover{
+    transform:scale(1.08);
+    box-shadow:0 6px 30px rgba(0,229,255,.6);
+}
+
 .page-content{
     flex:1;
     overflow-y:auto;
