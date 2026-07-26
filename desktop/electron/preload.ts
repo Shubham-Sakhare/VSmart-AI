@@ -29,6 +29,18 @@ contextBridge.exposeInMainWorld("vsmart", {
   writeCode: (code: string, language?: string) =>
     ipcRenderer.invoke("write-code", code, language),
 
+  systemControl: (action: string, value?: string | number) =>
+    ipcRenderer.invoke("system:control", { action, value }),
+
+  getMarketFeed: () =>
+    ipcRenderer.invoke("market:getFeed"),
+
+  getAnalysisFeed: () =>
+    ipcRenderer.invoke("market:getAnalysisFeed"),
+
+  getChartAnalysis: (symbol: string, label: string, timeframe?: string) =>
+    ipcRenderer.invoke("market:getChartAnalysis", symbol, label, timeframe),
+
   system: {
     getInfo: () =>
       ipcRenderer.invoke("system:getInfo")

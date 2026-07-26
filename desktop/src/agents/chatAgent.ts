@@ -1,7 +1,9 @@
 import { askAI } from "../llm/provider";
+import type { ReplyLang } from "../llm/openrouter";
 
 export async function chatAgent(
-  prompt: string
+  prompt: string,
+  lang: ReplyLang = "en"
 ): Promise<string> {
-  return await askAI(prompt);
+  return await askAI(prompt, lang);
 }

@@ -3,10 +3,16 @@ import { MessageSquare } from "lucide-react";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import BottomBar from "./BottomBar";
+import SettingsPanel from "./SettingsPanel";
 import CommandCenter from "../dashboard/CommandCenter";
+import CalendarPage from "../calendar/CalendarPage";
+import TasksPage from "../tasks/TasksPage";
+import AnalysisPage from "../analysis/AnalysisPage";
+import VSmartAIPage from "../vsmartai/VSmartAIPage";
 import ChatWidget from "../chat/ChatWidget";
 import { askVSmart } from "../../../core/aiEngine";
 import { useVoice, speak } from "../../voice/useVoice";
+import type { ReplyLang } from "../../../llm/openrouter";
 import "./layout.css";
 
 export type Page =
@@ -40,6 +46,15 @@ export default function MainLayout() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMinimized, setChatMinimized] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Controls the language VSmart replies in (text + voice) — set via the
+  // EN/HI toggle in the chat header or Settings. Independent of what
+  // language you speak in.
+  const [replyLang, setReplyLang] = useState<ReplyLang>("en");
+
+  // Hands-free "always listening for VSmart" mode — off by default (Settings).
+  const [wakeWordEnabled, setWakeWordEnabled] = useState(false);
 
   const sendCommand = async (text: string) => {
     if (!text.trim()) return;
@@ -51,15 +66,24 @@ export default function MainLayout() {
 
     setMessages(prev => [...prev, { sender: "You", text }]);
 
-    const reply = await askVSmart(text);
+    const result = await askVSmart(text, replyLang);
+    const reply = result.message ?? "Done.";
 
     setMessages(prev => [...prev, { sender: "VSmart", text: reply }]);
-    speak(reply);
+
+    // Only speak short command-type confirmations (open app, write code, memory,
+    // system control). Long informational chat replies stay text-only in the
+    // chat panel — reading a whole paragraph aloud is slow and unnecessary.
+    const isCommandAction = result.action !== "chat";
+
+    if (isCommandAction) {
+      speak(reply, replyLang === "hi" ? "hi-IN" : "en-IN");
+    }
   };
 
   // Single global mic instance — shared by the sidebar status card,
   // the bottom "Talk to VSmart" bar, and the chat popup.
-  const voice = useVoice({ onCommand: sendCommand });
+  const voice = useVoice({ onCommand: sendCommand, wakeWordEnabled });
 
   const handleNavigate = (page: Page) => {
     if (page === "conversations") {
@@ -77,13 +101,13 @@ export default function MainLayout() {
       case "aicore":
         return <ComingSoon label="AI Core" />;
       case "agents":
-        return <ComingSoon label="Agents" />;
+        return <AnalysisPage />;
       case "tasks":
-        return <ComingSoon label="Tasks" />;
+        return <TasksPage />;
       case "calendar":
-        return <ComingSoon label="Calendar" />;
+        return <CalendarPage />;
       case "memory":
-        return <ComingSoon label="Memory" />;
+        return <VSmartAIPage />;
       case "knowledge":
         return <ComingSoon label="Knowledge Base" />;
       case "tools":
@@ -103,7 +127,7 @@ export default function MainLayout() {
         <Sidebar activePage={activePage} onNavigate={handleNavigate} voice={voice} />
 
         <main className="main-content">
-          <Topbar />
+          <Topbar onOpenSettings={() => setSettingsOpen(true)} />
           <section className="page-content">
             {renderPage()}
           </section>
@@ -119,8 +143,19 @@ export default function MainLayout() {
         messages={messages}
         onSend={sendCommand}
         voice={voice}
+        replyLang={replyLang}
+        onLangChange={setReplyLang}
         onMinimizeToggle={() => setChatMinimized(prev => !prev)}
         onClose={() => setChatOpen(false)}
+      />
+
+      <SettingsPanel
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        replyLang={replyLang}
+        onLangChange={setReplyLang}
+        wakeWordEnabled={wakeWordEnabled}
+        onWakeWordChange={setWakeWordEnabled}
       />
 
       {!chatOpen && (

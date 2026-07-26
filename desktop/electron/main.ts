@@ -6,6 +6,8 @@ import { openApplication } from "./services/systemService.js";
 import { writeAndOpenCode } from "./services/codeWriterService.js";
 import { registerSystemIPC } from "./ipc/system.js";
 import { registerVoiceIPC } from "./ipc/voice.js";
+import { registerSystemControlIPC } from "./ipc/systemControl.js";
+import { registerMarketIPC } from "./ipc/market.js";
 import { initVosk } from "./services/voskService.js";
 
 
@@ -34,6 +36,8 @@ app.whenReady().then(() => {
   registerWindowIPC(() => mainWindow);
   registerMemoryIPC();
   registerSystemIPC();
+  registerSystemControlIPC();
+  registerMarketIPC();
   
   // SYSTEM COMMAND IPC
   ipcMain.handle(

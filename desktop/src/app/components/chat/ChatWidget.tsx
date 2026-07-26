@@ -2,6 +2,7 @@ import { Sparkles, Minus, X, MessageSquare } from "lucide-react";
 import ChatPanel from "./ChatPanel";
 import type { Message } from "../layout/MainLayout";
 import type { VoiceControls } from "../../voice/useVoice";
+import type { ReplyLang } from "../../../llm/openrouter";
 import "./ChatWidget.css";
 
 interface ChatWidgetProps {
@@ -10,6 +11,8 @@ interface ChatWidgetProps {
   messages: Message[];
   onSend: (text: string) => void;
   voice: VoiceControls;
+  replyLang: ReplyLang;
+  onLangChange: (lang: ReplyLang) => void;
   onMinimizeToggle: () => void;
   onClose: () => void;
 }
@@ -20,6 +23,8 @@ export default function ChatWidget({
   messages,
   onSend,
   voice,
+  replyLang,
+  onLangChange,
   onMinimizeToggle,
   onClose
 }: ChatWidgetProps) {
@@ -36,6 +41,22 @@ export default function ChatWidget({
         </div>
 
         <div className="chat-widget-controls">
+
+          <div className="lang-toggle" title="Reply language">
+            <button
+              className={replyLang === "en" ? "lang-btn active" : "lang-btn"}
+              onClick={() => onLangChange("en")}
+            >
+              EN
+            </button>
+            <button
+              className={replyLang === "hi" ? "lang-btn active" : "lang-btn"}
+              onClick={() => onLangChange("hi")}
+            >
+              HI
+            </button>
+          </div>
+
           <button className="widget-btn" onClick={onMinimizeToggle} title={minimized ? "Expand" : "Minimize"}>
             {minimized ? <MessageSquare size={15} /> : <Minus size={15} />}
           </button>

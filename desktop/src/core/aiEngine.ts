@@ -1,11 +1,11 @@
-import { route } from "../ai/router";
+import { route, type RouteResult } from "../ai/router";
+import type { ReplyLang } from "../llm/openrouter";
 
 export async function askVSmart(
-  input: string
-): Promise<string> {
+  input: string,
+  lang: ReplyLang = "en"
+): Promise<RouteResult> {
 
-  const result = await route(input);
-
-  return result.message ?? "Done.";
+  return await route(input, lang);
 
 }

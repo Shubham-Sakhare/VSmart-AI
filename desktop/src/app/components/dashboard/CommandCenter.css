@@ -26,7 +26,19 @@
     position:relative;
     overflow:hidden;
     transition:.3s;
+    animation:card-in .4s ease backwards;
 }
+
+@keyframes card-in{
+    from{ opacity:0; transform:translateY(10px); }
+    to{ opacity:1; transform:translateY(0); }
+}
+
+.cc-row-top .cc-card:nth-child(1){ animation-delay:.03s; }
+.cc-row-top .cc-card:nth-child(2){ animation-delay:.09s; }
+.cc-row-top .cc-card:nth-child(3){ animation-delay:.15s; }
+.cc-row-bottom .cc-card:nth-child(1){ animation-delay:.18s; }
+.cc-row-bottom .cc-card:nth-child(2){ animation-delay:.22s; }
 
 .cc-card::before{
     content:"";
@@ -244,10 +256,18 @@
     opacity:.8;
 }
 
-.tag-meeting{ background:rgba(0,229,255,.12); }
-.tag-overdue{ background:rgba(255,80,80,.15); color:#ff8080; }
-.tag-github{ background:rgba(0,229,255,.12); }
-.tag-focus{ background:rgba(255,220,80,.12); color:#ffdc80; }
+.tag-up{ background:rgba(0,255,156,.15); color:#00ff9c; }
+.tag-down{ background:rgba(255,80,80,.15); color:#ff8080; }
+
+.trend-up{ color:#00ff9c; }
+.trend-down{ color:#ff8080; }
+
+.feed-loading{
+    color:#5f8fa3;
+    font-size:12px;
+    text-align:center;
+    padding:16px 0;
+}
 
 /* Active agents */
 .agents-grid{

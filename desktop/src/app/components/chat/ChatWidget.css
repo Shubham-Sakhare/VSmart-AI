@@ -65,6 +65,35 @@
 .chat-widget-controls{
     display:flex;
     gap:6px;
+    align-items:center;
+}
+
+.lang-toggle{
+    display:flex;
+    border:1px solid rgba(0,229,255,.2);
+    border-radius:8px;
+    overflow:hidden;
+    margin-right:4px;
+}
+
+.lang-btn{
+    padding:5px 9px;
+    font-size:11px;
+    font-weight:600;
+    background:transparent;
+    border:none;
+    color:#7fb8cc;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.lang-btn.active{
+    background:linear-gradient(90deg,#00c8ff33,#a855f733);
+    color:#fff;
+}
+
+.lang-btn:hover{
+    color:#fff;
 }
 
 .widget-btn{

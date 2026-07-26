@@ -8,7 +8,11 @@ import {
   UserCircle2
 } from "lucide-react";
 
-export default function Topbar() {
+interface TopbarProps {
+  onOpenSettings: () => void;
+}
+
+export default function Topbar({ onOpenSettings }: TopbarProps) {
 
   const [now, setNow] = useState(new Date());
 
@@ -62,7 +66,7 @@ export default function Topbar() {
           <Bell size={18} />
         </button>
 
-        <button className="icon-btn">
+        <button className="icon-btn" onClick={onOpenSettings} title="Settings">
           <Settings size={18} />
         </button>
 

@@ -1,0 +1,222 @@
+.vsai-page{
+    display:flex;
+    flex-direction:column;
+    height:calc(100vh - 140px);
+    max-width:900px;
+    margin:0 auto;
+}
+
+/* Welcome / empty state */
+.vsai-welcome{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:22px;
+    text-align:center;
+}
+
+.vsai-orb{
+    width:70px;
+    height:70px;
+    border-radius:50%;
+    background:radial-gradient(circle at 35% 30%,#c084fc,#00e5ff 60%,#3b0764 100%);
+    box-shadow:0 0 50px rgba(168,85,247,.5), 0 0 30px rgba(0,229,255,.3);
+}
+
+.vsai-welcome h2{
+    font-size:22px;
+    color:#e8f7fc;
+    font-weight:600;
+}
+
+.vsai-quick-actions{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    justify-content:center;
+}
+
+.vsai-pill{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    padding:9px 16px;
+    border-radius:20px;
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(0,229,255,.18);
+    color:#cdeeff;
+    font-size:13px;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.vsai-pill:hover{
+    background:rgba(0,229,255,.1);
+    border-color:rgba(0,229,255,.35);
+}
+
+/* Message list */
+.vsai-messages{
+    flex:1;
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+    padding:10px 4px 20px;
+}
+
+.vsai-msg-row{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+}
+
+.vsai-msg-row.user{
+    flex-direction:row-reverse;
+    align-self:flex-end;
+}
+
+.vsai-avatar{
+    width:28px;
+    height:28px;
+    min-width:28px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:radial-gradient(circle,#0090b0,#062033);
+    border:1px solid rgba(0,229,255,.4);
+    color:#00e5ff;
+}
+
+.vsai-bubble{
+    max-width:min(640px,78%);
+    padding:12px 16px;
+    border-radius:16px;
+    font-size:14px;
+    line-height:1.6;
+    color:#e8f7fc;
+}
+
+.vsai-msg-row.ai .vsai-bubble{
+    background:rgba(0,229,255,.07);
+    border:1px solid rgba(0,229,255,.14);
+    border-bottom-left-radius:4px;
+}
+
+.vsai-msg-row.user .vsai-bubble{
+    background:linear-gradient(135deg,#0284a8,#00b4cc);
+    color:#04141c;
+    border-bottom-right-radius:4px;
+}
+
+.vsai-bubble p{
+    margin:0;
+    white-space:pre-wrap;
+    word-break:break-word;
+}
+
+.vsai-typing{
+    display:flex;
+    gap:5px;
+    padding:14px 16px;
+}
+
+.vsai-typing span{
+    width:6px;
+    height:6px;
+    border-radius:50%;
+    background:#00e5ff;
+    animation:vsai-blink 1.2s infinite;
+}
+
+.vsai-typing span:nth-child(2){ animation-delay:.2s; }
+.vsai-typing span:nth-child(3){ animation-delay:.4s; }
+
+@keyframes vsai-blink{
+    0%,100%{ opacity:.3; transform:translateY(0); }
+    50%{ opacity:1; transform:translateY(-3px); }
+}
+
+/* Input */
+.vsai-input-wrap{
+    padding-top:10px;
+}
+
+.vsai-input-box{
+    display:flex;
+    align-items:flex-end;
+    gap:10px;
+    padding:14px 16px;
+    border-radius:18px;
+    background:rgba(8,20,38,.75);
+    border:1px solid rgba(0,229,255,.2);
+    backdrop-filter:blur(14px);
+}
+
+.vsai-input-icon{
+    color:#a855f7;
+    margin-bottom:6px;
+}
+
+.vsai-input-box textarea{
+    flex:1;
+    background:none;
+    border:none;
+    outline:none;
+    resize:none;
+    color:#e8f7fc;
+    font-size:14px;
+    font-family:inherit;
+    max-height:140px;
+    padding:6px 0;
+}
+
+.vsai-input-box textarea::placeholder{
+    color:#5f8fa3;
+}
+
+.vsai-send-btn{
+    width:34px;
+    height:34px;
+    min-width:34px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:linear-gradient(135deg,#00c8ff,#a855f7);
+    border:none;
+    color:#04141c;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.vsai-send-btn:hover{
+    box-shadow:0 0 16px rgba(0,229,255,.4);
+}
+
+.vsai-send-btn:disabled{
+    opacity:.5;
+    cursor:default;
+}
+
+.vsai-input-footer{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:8px 4px 0;
+    font-size:11px;
+    color:#5f8fa3;
+}
+
+.vsai-input-footer span{
+    display:flex;
+    align-items:center;
+    gap:4px;
+}
+
+.vsai-footer-note{
+    opacity:.7;
+}

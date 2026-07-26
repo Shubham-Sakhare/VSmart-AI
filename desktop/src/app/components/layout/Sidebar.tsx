@@ -1,13 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./sidebar.css";
 
 import {
   LayoutGrid,
   Cpu,
-  Bot,
+  LineChart,
   ClipboardList,
   Calendar,
-  BrainCircuit,
+  Sparkles,
   MessageSquare,
   Library,
   Wrench,
@@ -25,22 +25,52 @@ interface SidebarProps {
   voice: VoiceControls;
 }
 
-const NAV_ITEMS: { page: Page; icon: React.ReactNode; label: string; badge?: number }[] = [
+const NAV_ITEMS: { page: Page; icon: React.ReactNode; label: string }[] = [
   { page: "dashboard", icon: <LayoutGrid size={19} />, label: "Command Center" },
   { page: "aicore", icon: <Cpu size={19} />, label: "AI Core" },
-  { page: "agents", icon: <Bot size={19} />, label: "Agents" },
-  { page: "tasks", icon: <ClipboardList size={19} />, label: "Tasks", badge: 3 },
+  { page: "agents", icon: <LineChart size={19} />, label: "Analysis" },
+  { page: "tasks", icon: <ClipboardList size={19} />, label: "Tasks" },
   { page: "calendar", icon: <Calendar size={19} />, label: "Calendar" },
-  { page: "memory", icon: <BrainCircuit size={19} />, label: "Memory" },
-  { page: "conversations", icon: <MessageSquare size={19} />, label: "Conversations", badge: 12 },
+  { page: "memory", icon: <Sparkles size={19} />, label: "VSmart AI" },
+  { page: "conversations", icon: <MessageSquare size={19} />, label: "Conversations" },
   { page: "knowledge", icon: <Library size={19} />, label: "Knowledge Base" },
-  { page: "tools", icon: <Wrench size={19} />, label: "Tools & Skills", badge: 18 },
+  { page: "tools", icon: <Wrench size={19} />, label: "Tools & Skills" },
   { page: "workflows", icon: <Workflow size={19} />, label: "Workflows" }
 ];
 
 export default function Sidebar({ activePage, onNavigate, voice }: SidebarProps) {
 
   const [focusMode, setFocusMode] = useState(false);
+  const [openTaskCount, setOpenTaskCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadCount = async () => {
+      try {
+        const raw = await window.vsmart.getMemory("tasks_list");
+        if (cancelled) return;
+
+        if (raw) {
+          const tasks: { status: string }[] = JSON.parse(raw);
+          setOpenTaskCount(tasks.filter(t => t.status !== "complete").length);
+        } else {
+          setOpenTaskCount(0);
+        }
+      } catch {
+        setOpenTaskCount(0);
+      }
+    };
+
+    loadCount();
+    // Refresh whenever the user navigates back to this sidebar view (e.g. after editing tasks).
+    const interval = setInterval(loadCount, 4000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [activePage]);
 
   const micLabel = voice.listening
     ? "Listening..."
@@ -70,8 +100,8 @@ export default function Sidebar({ activePage, onNavigate, voice }: SidebarProps)
           >
             {item.icon}
             <span className="menu-label">{item.label}</span>
-            {item.badge !== undefined && (
-              <span className="menu-badge">{item.badge}</span>
+            {item.page === "tasks" && !!openTaskCount && (
+              <span className="menu-badge">{openTaskCount}</span>
             )}
           </button>
         ))}

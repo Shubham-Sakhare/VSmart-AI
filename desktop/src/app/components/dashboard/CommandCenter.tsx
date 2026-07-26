@@ -1,4 +1,5 @@
 import "./CommandCenter.css";
+import { useEffect, useState } from "react";
 import { useSystem } from "../../hooks/useSystem";
 import type { Message } from "../layout/MainLayout";
 import type { VoiceControls } from "../../voice/useVoice";
@@ -11,9 +12,8 @@ import {
   Bot,
   Server,
   Info,
-  AlertTriangle,
-  GitPullRequest,
-  Timer
+  TrendingUp,
+  TrendingDown
 } from "lucide-react";
 
 interface CommandCenterProps {
@@ -21,12 +21,40 @@ interface CommandCenterProps {
   voice: VoiceControls;
 }
 
-const INTEL_FEED = [
-  { icon: <Info size={14} />, tag: "INFO", text: "Design review with the product team", sub: "Meeting" },
-  { icon: <AlertTriangle size={14} />, tag: "WARN", text: "2 tasks are overdue — Polish voice UI", sub: "Overdue" },
-  { icon: <GitPullRequest size={14} />, tag: "TIP", text: "3 pull requests awaiting your review", sub: "GitHub" },
-  { icon: <Timer size={14} />, tag: "TIP", text: "Deep-work block 2–4 PM. Notifications muted.", sub: "Focus" }
-];
+interface MarketItem {
+  symbol: string;
+  label: string;
+  price: string;
+  changePercent: number;
+  up: boolean;
+}
+
+function useMarketFeed() {
+  const [feed, setFeed] = useState<MarketItem[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        const data = await window.vsmart.getMarketFeed();
+        if (!cancelled) setFeed(data);
+      } catch {
+        // keep last known feed on error
+      }
+    };
+
+    load();
+    const interval = setInterval(load, 60000); // refresh every 60s
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
+  return feed;
+}
 
 function Gauge({ label, value }: { label: string; value: number }) {
   const circumference = 2 * Math.PI * 34;
@@ -54,6 +82,7 @@ function Gauge({ label, value }: { label: string; value: number }) {
 export default function CommandCenter({ messages, voice }: CommandCenterProps) {
 
   const system = useSystem();
+  const marketFeed = useMarketFeed();
   const lastReply = [...messages].reverse().find(m => m.sender === "VSmart");
 
   return (
@@ -98,7 +127,7 @@ export default function CommandCenter({ messages, voice }: CommandCenterProps) {
             />
           </div>
           <h1>VSMART</h1>
-          <p>AI CORE &nbsp;<span className="core-version">2.0</span></p>
+          <p>AI CORE &nbsp;<span className="core-version">v1.0.0</span></p>
           {lastReply && <p className="last-reply">"{lastReply.text}"</p>}
         </div>
 
@@ -107,15 +136,20 @@ export default function CommandCenter({ messages, voice }: CommandCenterProps) {
             <span className="icon-badge badge-purple"><Info size={15} /></span>
             <h3>LIVE INTELLIGENCE FEED</h3>
             <span className="live-dot">LIVE</span>
-
           </div>
 
-          {INTEL_FEED.map((item, i) => (
-            <div className="feed-item" key={i}>
-              {item.icon}
+          {marketFeed.length === 0 && (
+            <p className="feed-loading">Loading market data...</p>
+          )}
+
+          {marketFeed.map((item) => (
+            <div className="feed-item" key={item.symbol}>
+              {item.up ? <TrendingUp size={14} className="trend-up" /> : <TrendingDown size={14} className="trend-down" />}
               <div>
-                <p>{item.text}</p>
-                <span className={`feed-tag tag-${item.tag.toLowerCase()}`}>{item.sub}</span>
+                <p>{item.label} <strong>{item.price}</strong></p>
+                <span className={item.up ? "feed-tag tag-up" : "feed-tag tag-down"}>
+                  {item.up ? "+" : ""}{item.changePercent}%
+                </span>
               </div>
             </div>
           ))}

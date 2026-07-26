@@ -37,11 +37,30 @@ export function detectIntent(text: string): Intent {
   // System / open app or website — trigger words can appear ANYWHERE in the sentence,
   // e.g. "chrome open karo", "khol do notepad", "open chrome".
   if (
-    /\b(open|khol|kholo|khol do|shuru karo|start|chalao|chala do|lagao|laga do|play|search)\b/.test(input) ||
+    /\b(open|khol|kholo|khol do|shuru karo|start|chalao|chala do|lagao|laga do|play|search|bajao|baja do|gana|gaana|song)\b/.test(input) ||
     input.includes("settings") ||
     input.includes("calculator") ||
     input.includes("notepad") ||
-    input.includes("task manager")
+    input.includes("task manager") ||
+    input.includes("volume") ||
+    input.includes("brightness") ||
+    input.includes("chamak") ||
+    input.includes("wifi") ||
+    input.includes("wi-fi") ||
+    input.includes("bluetooth") ||
+    input.includes("screenshot") ||
+    input.includes("screen shot") ||
+    input.includes("recycle bin") ||
+    input.includes("trash") ||
+    input.includes("restart") ||
+    input.includes("reboot") ||
+    input.includes("shutdown") ||
+    input.includes("shut down") ||
+    input.includes("download") ||
+    input.includes("document") ||
+    input.includes("desktop") ||
+    input.includes("picture") ||
+    input.includes("folder")
   ) {
     return "system";
   }
