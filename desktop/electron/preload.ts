@@ -1,66 +1,97 @@
 console.log("VSMART PRELOAD LOADED");
-import {
-  contextBridge,
-  ipcRenderer
-} from "electron";
 
-contextBridge.exposeInMainWorld("vsmart", {
-  minimize: () =>
-    ipcRenderer.send("window-minimize"),
+import{contextBridge,ipcRenderer}from"electron";
 
-  maximize: () =>
-    ipcRenderer.send("window-maximize"),
+contextBridge.exposeInMainWorld("vsmart",{
 
-  close: () =>
-    ipcRenderer.send("window-close"),
+minimize:()=>ipcRenderer.send("window-minimize"),
 
-  saveMemory: (key: string, value: string) =>
-    ipcRenderer.invoke("memory-save", key, value),
+maximize:()=>ipcRenderer.send("window-maximize"),
 
-  getMemory: (key: string) =>
-    ipcRenderer.invoke("memory-get", key),
+close:()=>ipcRenderer.send("window-close"),
 
-  getAllMemory: () =>
-    ipcRenderer.invoke("memory-all"),
+saveMemory:(key:string,value:string)=>
+ipcRenderer.invoke("memory-save",key,value),
 
-  openSystem: (appName: string) =>
-    ipcRenderer.invoke("open-system", appName),
+getMemory:(key:string)=>
+ipcRenderer.invoke("memory-get",key),
 
-  writeCode: (code: string, language?: string) =>
-    ipcRenderer.invoke("write-code", code, language),
+getAllMemory:()=>
+ipcRenderer.invoke("memory-all"),
 
-  systemControl: (action: string, value?: string | number) =>
-    ipcRenderer.invoke("system:control", { action, value }),
+openSystem:(appName:string)=>
+ipcRenderer.invoke("open-system",appName),
 
-  getMarketFeed: () =>
-    ipcRenderer.invoke("market:getFeed"),
+writeCode:(code:string,language?:string)=>
+ipcRenderer.invoke("write-code",code,language),
 
-  getAnalysisFeed: () =>
-    ipcRenderer.invoke("market:getAnalysisFeed"),
 
-  getChartAnalysis: (symbol: string, label: string, timeframe?: string) =>
-    ipcRenderer.invoke("market:getChartAnalysis", symbol, label, timeframe),
+systemControl:(action:string,value?:string|number)=>
+ipcRenderer.invoke("system:control",{action,value}),
 
-  system: {
-    getInfo: () =>
-      ipcRenderer.invoke("system:getInfo")
-  },
 
-  voice: {
-    sendAudioChunk: (chunk: ArrayBuffer) =>
-      ipcRenderer.send("voice:audio-chunk", chunk),
+getMarketFeed:()=>
+ipcRenderer.invoke("market:getFeed"),
 
-    reset: () =>
-      ipcRenderer.send("voice:reset"),
+getAnalysisFeed:()=>
+ipcRenderer.invoke("market:getAnalysisFeed"),
 
-    onPartialResult: (callback: (text: string) => void) => {
-      ipcRenderer.removeAllListeners("voice:partial-result");
-      ipcRenderer.on("voice:partial-result", (_e, text) => callback(text));
-    },
+getChartAnalysis:(symbol:string,label:string,timeframe?:string)=>
+ipcRenderer.invoke("market:getChartAnalysis",symbol,label,timeframe),
 
-    onFinalResult: (callback: (text: string) => void) => {
-      ipcRenderer.removeAllListeners("voice:final-result");
-      ipcRenderer.on("voice:final-result", (_e, text) => callback(text));
-    }
-  }
+
+
+/* WINDOWS APPS */
+
+getInstalledApps:()=>
+ipcRenderer.invoke("get-installed-apps"),
+
+
+launchSystemApp:(appId:string)=>
+ipcRenderer.invoke("launch-system-app",appId),
+
+
+
+system:{
+getInfo:()=>
+ipcRenderer.invoke("system:getInfo")
+},
+
+
+
+voice:{
+
+sendAudioChunk:(chunk:ArrayBuffer)=>
+ipcRenderer.send("voice:audio-chunk",chunk),
+
+
+reset:()=>
+ipcRenderer.send("voice:reset"),
+
+
+onPartialResult:(callback:(text:string)=>void)=>{
+
+ipcRenderer.removeAllListeners("voice:partial-result");
+
+ipcRenderer.on(
+"voice:partial-result",
+(_e,text)=>callback(text)
+);
+
+},
+
+
+onFinalResult:(callback:(text:string)=>void)=>{
+
+ipcRenderer.removeAllListeners("voice:final-result");
+
+ipcRenderer.on(
+"voice:final-result",
+(_e,text)=>callback(text)
+);
+
+}
+
+}
+
 });

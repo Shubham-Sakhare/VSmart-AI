@@ -1,0 +1,116 @@
+.tools-page-wrap{
+    display:flex;
+    flex-direction:column;
+    gap:20px;
+}
+
+.tools-header{
+    display:flex;
+    align-items:center;
+    gap:14px;
+}
+
+.tools-header h3{
+    font-size:16px;
+    color:#e8f7fc;
+}
+
+.tools-header p{
+    font-size:12px;
+    color:#7fb8cc;
+    margin-top:2px;
+}
+
+.tools-categories{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+}
+
+.tools-category{
+    background:rgba(8,20,38,.65);
+    border:1px solid rgba(0,255,255,.12);
+    border-radius:16px;
+    overflow:hidden;
+    position:relative;
+}
+
+.tools-category::before{
+    content:"";
+    position:absolute;
+    top:0; left:0; right:0;
+    height:2px;
+    background:linear-gradient(90deg,#00e5ff,#a855f7,#ff2e9a);
+    opacity:.7;
+}
+
+.tools-category-header{
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:16px 18px;
+    background:none;
+    border:none;
+    color:#e8f7fc;
+    font-size:13px;
+    font-weight:600;
+    letter-spacing:.5px;
+    cursor:pointer;
+}
+
+.chev{
+    transition:.25s;
+    color:#7fb8cc;
+}
+
+.chev.open{
+    transform:rotate(180deg);
+    color:#00e5ff;
+}
+
+.tools-skill-list{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    padding:0 18px 18px;
+    animation:tools-in .2s ease;
+}
+
+@keyframes tools-in{
+    from{ opacity:0; transform:translateY(-4px); }
+    to{ opacity:1; transform:translateY(0); }
+}
+
+.tools-skill-item{
+    padding:12px 14px;
+    border-radius:12px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.06);
+}
+
+.tools-skill-title{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    color:#00e5ff;
+    font-size:13px;
+    font-weight:600;
+    margin-bottom:8px;
+}
+
+.tools-skill-examples{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+}
+
+.tools-example-pill{
+    font-size:11px;
+    color:#cdeeff;
+    background:rgba(0,229,255,.06);
+    border:1px solid rgba(0,229,255,.14);
+    padding:5px 10px;
+    border-radius:20px;
+    font-style:italic;
+}

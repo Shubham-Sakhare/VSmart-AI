@@ -1,21 +1,22 @@
 .topbar{
+    position:sticky;
+    top:0;
+    z-index:999;
 
-height:78px;
+    flex-shrink:0;
 
-display:flex;
+    height:78px;
 
-align-items:center;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
 
-justify-content:space-between;
+    padding:0 28px;
 
-padding:0 28px;
+    background:rgba(5,15,28,.95);
+    backdrop-filter:blur(16px);
 
-background:rgba(5,15,28,.88);
-
-backdrop-filter:blur(16px);
-
-border-bottom:1px solid rgba(0,255,255,.12);
-
+    border-bottom:1px solid rgba(0,255,255,.12);
 }
 
 .topbar-left{

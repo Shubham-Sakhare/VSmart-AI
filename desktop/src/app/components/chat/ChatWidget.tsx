@@ -1,6 +1,6 @@
 import { Sparkles, Minus, X, MessageSquare } from "lucide-react";
 import ChatPanel from "./ChatPanel";
-import type { Message } from "../layout/MainLayout";
+import type { Conversation, Message } from "../layout/MainLayout";
 import type { VoiceControls } from "../../voice/useVoice";
 import type { ReplyLang } from "../../../llm/openrouter";
 import "./ChatWidget.css";
@@ -9,12 +9,18 @@ interface ChatWidgetProps {
   open: boolean;
   minimized: boolean;
   messages: Message[];
-  onSend: (text: string) => void;
+  onSend: (text: string) => void | Promise<void>;
   voice: VoiceControls;
   replyLang: ReplyLang;
   onLangChange: (lang: ReplyLang) => void;
   onMinimizeToggle: () => void;
   onClose: () => void;
+  conversations: Conversation[];
+  activeConversationId: string | null;
+  onNewChat: () => void;
+  onSelectConversation: (id: string) => void;
+  onDeleteConversation: (id: string) => void;
+  onDeleteConversations: (ids: string[]) => void;
 }
 
 export default function ChatWidget({

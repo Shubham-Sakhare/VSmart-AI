@@ -18,7 +18,10 @@
     display:flex;
     flex-direction:column;
     overflow:hidden;
+    position:relative;
     background:
+        radial-gradient(circle at 15% 0%,rgba(168,85,247,.14) 0%,transparent 40%),
+        radial-gradient(circle at 85% 15%,rgba(0,229,255,.14) 0%,transparent 40%),
         radial-gradient(circle at top,#10254b 0%,#07111f 45%,#040812 100%);
 }
 
@@ -33,7 +36,7 @@
 .chat-launcher{
 
     position:fixed;
-    bottom:100px;
+    bottom:150px;
     right:24px;
 
     width:56px;
@@ -63,6 +66,7 @@
 
 .page-content{
     flex:1;
+    min-height:0;
     overflow-y:auto;
     padding:25px;
 }

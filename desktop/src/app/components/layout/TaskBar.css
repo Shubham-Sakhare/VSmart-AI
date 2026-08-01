@@ -1,0 +1,233 @@
+.taskbar{
+display:flex;
+align-items:center;
+justify-content:center;
+gap:10px;
+padding:8px 18px;
+background:rgba(5,15,28,.92);
+backdrop-filter:blur(20px);
+border-top:1px solid rgba(0,255,255,.14);
+position:relative;
+z-index:250;
+}
+.taskbar-start{
+display:flex;
+align-items:center;
+justify-content:center;
+background:none;
+border:none;
+cursor:pointer;
+}
+.start-logo{
+width:36px;
+height:36px;
+border-radius:10px;
+display:flex;
+align-items:center;
+justify-content:center;
+font-weight:800;
+font-size:16px;
+color:#000;
+background:linear-gradient(135deg,#00e5ff,#a855f7);
+box-shadow:0 0 18px rgba(0,229,255,.4);
+transition:.2s;
+}
+.taskbar-start:hover .start-logo{
+box-shadow:0 0 26px rgba(0,229,255,.6);
+transform:scale(1.05);
+}
+.windows-button{
+width:40px;
+height:36px;
+border-radius:10px;
+color:#8fb8cc;
+background:rgba(255,255,255,.03);
+border:1px solid rgba(255,255,255,.06);
+transition:.2s;
+}
+.windows-button:hover{
+background:rgba(0,229,255,.12);
+color:#00e5ff;
+transform:scale(1.05);
+}
+.taskbar-pinned{
+display:flex;
+align-items:center;
+gap:6px;
+padding:4px 10px;
+border-radius:14px;
+background:rgba(255,255,255,.03);
+border:1px solid rgba(255,255,255,.06);
+}
+.taskbar-icon{
+position:relative;
+width:40px;
+height:36px;
+display:flex;
+align-items:center;
+justify-content:center;
+border-radius:10px;
+border:none;
+background:transparent;
+color:#8fb8cc;
+cursor:pointer;
+transition:.2s;
+}
+.taskbar-icon:hover{
+background:rgba(0,229,255,.1);
+color:#e8f7fc;
+}
+.taskbar-icon.active{
+background:rgba(0,229,255,.14);
+color:#00e5ff;
+}
+.running-dot{
+position:absolute;
+bottom:2px;
+width:4px;
+height:4px;
+border-radius:50%;
+background:#00e5ff;
+box-shadow:0 0 6px #00e5ff;
+}
+.taskbar-icon.mic{
+color:#c084fc;
+}
+.taskbar-icon.mic.active.listening{
+background:rgba(255,46,109,.15);
+color:#ff5c86;
+animation:tb-mic-pulse 1.2s infinite;
+}
+@keyframes tb-mic-pulse{
+0%{box-shadow:0 0 0 0 rgba(255,46,109,.4);}
+70%{box-shadow:0 0 0 8px rgba(255,46,109,0);}
+100%{box-shadow:0 0 0 0 rgba(255,46,109,.4);}
+}
+.taskbar-tray{
+display:flex;
+align-items:center;
+gap:12px;
+padding:6px 14px;
+border-radius:14px;
+background:rgba(255,255,255,.03);
+border:1px solid rgba(255,255,255,.06);
+color:#8fb8cc;
+margin-left:auto;
+}
+.tray-clock{
+display:flex;
+flex-direction:column;
+align-items:flex-end;
+line-height:1.2;
+}
+.tray-clock span:first-child{
+font-size:12px;
+font-weight:600;
+color:#e8f7fc;
+}
+.tray-date{
+font-size:10px;
+color:#7fb8cc;
+}
+.taskbar-overlay{
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.4);
+backdrop-filter:blur(4px);
+z-index:260;
+display:flex;
+align-items:flex-end;
+justify-content:center;
+padding-bottom:70px;
+}
+.start-menu{
+width:540px;
+max-width:92vw;
+max-height:65vh;
+background:linear-gradient(180deg,rgba(8,20,38,.98),rgba(4,10,20,.99));
+border:1px solid rgba(0,229,255,.2);
+border-radius:18px;
+box-shadow:0 20px 60px rgba(0,0,0,.5),0 0 40px rgba(0,229,255,.1);
+padding:18px;
+animation:start-in .18s ease;
+overflow-y:auto;
+}
+@keyframes start-in{
+from{
+opacity:0;
+transform:translateY(15px) scale(.96);
+}
+to{
+opacity:1;
+transform:translateY(0) scale(1);
+}
+}
+.start-menu-header{
+display:flex;
+align-items:center;
+justify-content:space-between;
+margin-bottom:14px;
+font-size:13px;
+font-weight:600;
+color:#8fdfff;
+letter-spacing:.5px;
+}
+.start-close{
+width:26px;
+height:26px;
+display:flex;
+align-items:center;
+justify-content:center;
+border-radius:8px;
+border:1px solid rgba(0,229,255,.15);
+background:rgba(0,229,255,.06);
+color:#8fdfff;
+cursor:pointer;
+}
+.start-close:hover{
+background:rgba(255,80,80,.2);
+color:#ff8080;
+}
+.start-grid{
+display:grid;
+grid-template-columns:repeat(4,1fr);
+gap:10px;
+}
+.start-tile{
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+gap:8px;
+min-height:90px;
+padding:12px 8px;
+border-radius:12px;
+background:rgba(255,255,255,.03);
+border:1px solid rgba(255,255,255,.06);
+color:#cdeeff;
+cursor:pointer;
+transition:.2s;
+font-size:11px;
+text-align:center;
+}
+.start-tile img{
+object-fit:contain;
+border-radius:6px;
+}
+.start-tile:hover{
+background:rgba(0,229,255,.1);
+border-color:rgba(0,229,255,.25);
+transform:translateY(-2px);
+}
+.start-tile.active{
+background:linear-gradient(135deg,#00c8ff22,#a855f722);
+border-color:#00d9ff;
+color:#fff;
+}
+
+.system-app-icon{
+    width:32px;
+    height:32px;
+    object-fit:contain;
+    border-radius:6px;
+}

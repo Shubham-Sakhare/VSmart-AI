@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import "./sidebar.css";
-
 import {
   LayoutGrid,
   Cpu,
@@ -15,14 +14,21 @@ import {
   Mic,
   Zap
 } from "lucide-react";
-
 import type { Page } from "./MainLayout";
 import type { VoiceControls } from "../../voice/useVoice";
+
+interface SidebarItem {
+  page: Page;
+  label: string;
+  enabled: boolean;
+}
 
 interface SidebarProps {
   activePage: Page;
   onNavigate: (page: Page) => void;
   voice: VoiceControls;
+  sidebarEnabled: boolean;
+  sidebarItems: SidebarItem[];
 }
 
 const NAV_ITEMS: { page: Page; icon: React.ReactNode; label: string }[] = [
@@ -38,8 +44,13 @@ const NAV_ITEMS: { page: Page; icon: React.ReactNode; label: string }[] = [
   { page: "workflows", icon: <Workflow size={19} />, label: "Workflows" }
 ];
 
-export default function Sidebar({ activePage, onNavigate, voice }: SidebarProps) {
-
+export default function Sidebar({
+  activePage,
+  onNavigate,
+  voice,
+  sidebarEnabled,
+  sidebarItems
+}: SidebarProps) {
   const [focusMode, setFocusMode] = useState(false);
   const [openTaskCount, setOpenTaskCount] = useState<number | null>(null);
 
@@ -63,7 +74,7 @@ export default function Sidebar({ activePage, onNavigate, voice }: SidebarProps)
     };
 
     loadCount();
-    // Refresh whenever the user navigates back to this sidebar view (e.g. after editing tasks).
+
     const interval = setInterval(loadCount, 4000);
 
     return () => {
@@ -71,6 +82,18 @@ export default function Sidebar({ activePage, onNavigate, voice }: SidebarProps)
       clearInterval(interval);
     };
   }, [activePage]);
+
+  if (!sidebarEnabled) {
+    return null;
+  }
+
+  const visibleItems = NAV_ITEMS.filter(item =>
+    sidebarItems.some(
+      setting =>
+        setting.page === item.page &&
+        setting.enabled
+    )
+  );
 
   const micLabel = voice.listening
     ? "Listening..."
@@ -80,8 +103,6 @@ export default function Sidebar({ activePage, onNavigate, voice }: SidebarProps)
 
   return (
     <aside className="sidebar">
-
-      {/* Logo */}
       <div className="logo">
         <div className="logo-circle">V</div>
         <div>
@@ -90,9 +111,8 @@ export default function Sidebar({ activePage, onNavigate, voice }: SidebarProps)
         </div>
       </div>
 
-      {/* Navigation */}
       <nav className="menu">
-        {NAV_ITEMS.map(item => (
+        {visibleItems.map(item => (
           <button
             key={item.page}
             className={activePage === item.page ? "menu-item active" : "menu-item"}
@@ -107,7 +127,6 @@ export default function Sidebar({ activePage, onNavigate, voice }: SidebarProps)
         ))}
       </nav>
 
-      {/* Voice Status */}
       <div className="status-card">
         <h3>VOICE STATUS</h3>
 
@@ -133,7 +152,6 @@ export default function Sidebar({ activePage, onNavigate, voice }: SidebarProps)
         <Zap size={16} />
         Focus Mode
       </button>
-
     </aside>
   );
 }

@@ -1,99 +1,132 @@
-// OpenRouter-backed models.
-// - Hunyuan (Tencent Hy3): general chat / conversation
-// - Qwen3-Coder: coding-specific requests
-
 export type ReplyLang = "en" | "hi";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
-const HUNYUAN_MODEL = "tencent/hy3:free";
-const QWEN_CODER_MODEL = "qwen/qwen3-coder:free";
+const CHAT_MODELS = [
+  "openai/gpt-oss-20b:free",
+  "nvidia/nemotron-3-ultra:free",
+  "google/gemma-3-4b-it:free",
+  "nvidia/nemotron-3-super:free",
+];
 
-const hunyuanKey = import.meta.env.VITE_OPENROUTER_HUNYUAN_KEY;
-const qwenKey = import.meta.env.VITE_OPENROUTER_QWEN_KEY;
+const CODER_MODELS = [
+  "openai/gpt-oss-20b:free",
+  "cohere/north-mini-code:free",
+  "poolside/laguna-s2.1:free",
+  "google/gemma-3-4b-it:free",
+];
 
-// ===== Debug =====
-console.log("========== OpenRouter ==========");
-console.log("Hunyuan Key Exists :", !!hunyuanKey);
-console.log("Qwen Key Exists    :", !!qwenKey);
-console.log("Qwen Key Prefix    :", qwenKey?.slice(0, 12));
-console.log("===============================");
+const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
 
 function languageInstruction(lang: ReplyLang): string {
   return lang === "hi"
-    ? "You must always reply in Hindi (Devanagari script), regardless of what language the user wrote in."
-    : "You must always reply in English, regardless of what language the user wrote in.";
+    ? "Always reply only in Hindi using Devanagari script."
+    : "Always reply only in English.";
 }
 
-async function callOpenRouter(
+async function callOpenRouterOnce(
   apiKey: string,
   model: string,
   prompt: string,
   lang: ReplyLang
 ): Promise<string> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
 
+  try {
+    console.log("Using model:", model);
+
+    const response = await fetch(OPENROUTER_URL, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+        "HTTP-Referer": "https://vsmart.local",
+        "X-Title": "VSmart AI",
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          {
+            role: "system",
+            content:
+              `You are VSmart AI, a Jarvis-like assistant. ` +
+              languageInstruction(lang) +
+              " Keep replies short, direct and helpful. Only explain in detail if the user explicitly asks.",
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 2048,
+      }),
+    });
+
+    clearTimeout(timeout);
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data?.error?.message ||
+        data?.message ||
+        response.statusText
+      );
+    }
+
+    const answer = data?.choices?.[0]?.message?.content;
+
+    if (!answer) {
+      throw new Error("Empty response from OpenRouter.");
+    }
+
+    return answer.trim();
+  } catch (err) {
+    clearTimeout(timeout);
+    throw err;
+  }
+}
+
+async function callWithFallback(
+  apiKey: string,
+  models: string[],
+  prompt: string,
+  lang: ReplyLang
+): Promise<string> {
   if (!apiKey) {
-    throw new Error(`❌ API Key missing for ${model}`);
+    throw new Error("OpenRouter API Key missing.");
   }
 
-  console.log("Using Model :", model);
-  console.log("Prompt      :", prompt);
+  let lastError: unknown;
 
-  const response = await fetch(OPENROUTER_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`,
-      "HTTP-Referer": "http://localhost:5173",
-      "X-Title": "VSmart AI"
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        {
-          role: "system",
-          content:
-            `You are VSmart, a helpful assistant. ${languageInstruction(lang)}`
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ]
-    })
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-
-    console.error("========== OpenRouter Error ==========");
-    console.error("Status :", response.status);
-    console.error("Body   :", errorText);
-    console.error("======================================");
-
-    throw new Error(errorText);
+  for (const model of models) {
+    try {
+      return await callOpenRouterOnce(apiKey, model, prompt, lang);
+    } catch (err) {
+      console.warn(`❌ ${model} failed`);
+      console.error(err);
+      lastError = err;
+    }
   }
 
-  const data = await response.json();
-
-  console.log("OpenRouter Success");
-  console.log(data);
-
-  return data?.choices?.[0]?.message?.content ?? "No response received.";
+  throw lastError ?? new Error("All OpenRouter models failed.");
 }
 
 export async function askHunyuan(
   prompt: string,
   lang: ReplyLang = "en"
 ): Promise<string> {
-  return callOpenRouter(hunyuanKey, HUNYUAN_MODEL, prompt, lang);
+  return callWithFallback(apiKey, CHAT_MODELS, prompt, lang);
 }
 
 export async function askQwenCoder(
   prompt: string,
   lang: ReplyLang = "en"
 ): Promise<string> {
-  return callOpenRouter(qwenKey, QWEN_CODER_MODEL, prompt, lang);
+  return callWithFallback(apiKey, CODER_MODELS, prompt, lang);
 }
 
 export function isCodingPrompt(prompt: string): boolean {
@@ -101,7 +134,10 @@ export function isCodingPrompt(prompt: string): boolean {
 
   const codingSignals = [
     "code",
+    "coding",
+    "program",
     "function",
+    "class",
     "bug",
     "error",
     "debug",
@@ -111,20 +147,35 @@ export function isCodingPrompt(prompt: string): boolean {
     "typescript",
     "java",
     "c++",
+    "c#",
+    "react",
+    "node",
+    "express",
+    "nextjs",
+    "next.js",
     "html",
     "css",
-    "react",
-    "component",
-    "api",
+    "tailwind",
     "sql",
+    "mongodb",
+    "mysql",
+    "api",
+    "json",
     "regex",
     "algorithm",
-    "class",
-    "variable",
     "compile",
     "syntax",
-    "refactor"
+    "refactor",
+    "fix",
+    "build",
+    "npm",
+    "yarn",
+    "pnpm",
+    "vite",
+    "electron",
   ];
 
-  return codingSignals.some(signal => p.includes(signal));
+  return codingSignals.some((word) => p.includes(word));
 }
+
+console.log("OpenRouter API Key Loaded:", !!apiKey);
