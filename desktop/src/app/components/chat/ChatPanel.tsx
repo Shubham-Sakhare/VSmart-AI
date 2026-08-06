@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Send, Mic, Sparkles, User } from "lucide-react";
+import { Send, Mic, Sparkles, User, Eye } from "lucide-react";
 import type { Message } from "../layout/MainLayout";
 import type { VoiceControls } from "../../voice/useVoice";
 import "./ChatPanel.css";
@@ -102,6 +102,14 @@ export default function ChatPanel({ messages, onSend, voice }: ChatPanelProps) {
             if (e.key === "Enter") handleSend();
           }}
         />
+
+        <button
+          onClick={() => onSend("what's on my screen")}
+          className="icon-btn vision-btn"
+          title="Screen Vision — let VSmart see your screen"
+        >
+          <Eye size={17} />
+        </button>
 
         {voice.supported && (
           <button

@@ -10,7 +10,7 @@
     "skipLibCheck": true,
     "ignoreDeprecations": "6.0"
   },
-  "include": [
+  "files": [
     "electron/preload.ts"
   ]
 }

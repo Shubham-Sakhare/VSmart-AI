@@ -1,27 +1,120 @@
 import {exec} from "child_process";
+import {app,dialog} from "electron";
+import fs from "fs";
+import path from "path";
 import {openInSession} from "./browserSessionService.js";
 
 interface WindowsApp{
 name:string;
 id:string;
 icon:string;
+path:string;
 }
+
+interface LibraryApp extends WindowsApp{
+customIcon?:string;
+pinned:boolean;
+}
+
+/* ================= paths (userData - safe when packaged) ================= */
+
+function userDataFile(name:string):string{
+return path.join(app.getPath("userData"),name);
+}
+
+const APPS_CACHE_FILE=userDataFile("system-apps-cache.json");
+const LIBRARY_FILE=userDataFile("launcher-library-apps.json");
+
+// How long the disk cache stays "fresh". Re-scanning installed apps + icons
+// is the heaviest operation in the launcher, so we avoid doing it more than
+// this often - it's the main fix for launcher lag / system load.
+const CACHE_TTL_MS=12*60*60*1000; // 12 hours
+
+/* ================= in-memory state ================= */
 
 let installedAppsCache:WindowsApp[]|null=null;
+let backgroundRefreshInFlight=false;
 
-export function getInstalledApps():Promise<WindowsApp[]>{
+/* ================= disk cache helpers ================= */
 
-if(installedAppsCache){
-return Promise.resolve(installedAppsCache);
+function readAppsCacheFromDisk():{ts:number;apps:WindowsApp[]}|null{
+try{
+if(!fs.existsSync(APPS_CACHE_FILE))return null;
+return JSON.parse(fs.readFileSync(APPS_CACHE_FILE,"utf-8"));
+}catch{
+return null;
+}
 }
 
+function writeAppsCacheToDisk(apps:WindowsApp[]){
+try{
+fs.mkdirSync(path.dirname(APPS_CACHE_FILE),{recursive:true});
+fs.writeFileSync(APPS_CACHE_FILE,JSON.stringify({ts:Date.now(),apps}));
+}catch{
+/* best-effort cache, ignore write failures */
+}
+}
+
+/* ================= powershell: apps + icons in one pass ================= */
+
+// Enumerates shell:AppsFolder (covers both classic desktop apps and UWP/
+// Store apps) and pulls a small 32x32 PNG icon for each, base64-encoded.
+// Wrapped so any single app's icon failure never breaks the rest of the list.
+const FETCH_SCRIPT=`
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+Add-Type -TypeDefinition @"
+using System;
+using System.Windows.Forms;
+public class VSmartIconHelper : AxHost {
+  public VSmartIconHelper() : base(string.Empty) { }
+  public static System.Drawing.Image GetImage(object iPictureDisp) {
+    return GetPictureFromIPicture(iPictureDisp);
+  }
+}
+"@ -ReferencedAssemblies System.Windows.Forms, System.Drawing
+
+$shell = New-Object -ComObject Shell.Application
+$folder = $shell.Namespace('shell:AppsFolder')
+$out = New-Object System.Collections.ArrayList
+
+foreach ($item in $folder.Items()) {
+  try {
+    $name = $item.Name
+    $appId = $folder.GetDetailsOf($item, 0)
+    $iconB64 = $null
+    try {
+      $pic = $item.ExtendedProperty("System.Thumbnail")
+      if ($pic) {
+        $img = [VSmartIconHelper]::GetImage($pic)
+        if ($img) {
+          $bmp = New-Object System.Drawing.Bitmap $img, 32, 32
+          $ms = New-Object System.IO.MemoryStream
+          $bmp.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png)
+          $iconB64 = [Convert]::ToBase64String($ms.ToArray())
+          $ms.Dispose(); $bmp.Dispose(); $img.Dispose()
+        }
+      }
+    } catch {}
+    if ($name -and $appId) {
+      [void]$out.Add([PSCustomObject]@{ name = $name; id = $appId; icon = $iconB64 })
+    }
+  } catch {}
+}
+$out | ConvertTo-Json -Compress -Depth 3
+`;
+
+function runPowerShellAppsWithIcons():Promise<WindowsApp[]>{
 return new Promise((resolve)=>{
 
+const encoded=Buffer.from(FETCH_SCRIPT,"utf16le").toString("base64");
+
 exec(
-`powershell -Command "Get-StartApps | ConvertTo-Json -Compress"`,
+`powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand ${encoded}`,
+{maxBuffer:1024*1024*50,timeout:25000},
 (error,stdout)=>{
 
-if(error){
+if(error||!stdout){
 resolve([]);
 return;
 }
@@ -29,59 +122,143 @@ return;
 try{
 
 const data=JSON.parse(stdout);
-
-const apps=Array.isArray(data)
-?data
-:[data];
+const apps=Array.isArray(data)?data:[data];
 
 const list=apps
-.filter((app:any)=>app.Name&&app.AppID)
-.map((app:any)=>({
-
-name:app.Name,
-id:app.AppID,
-icon:""
-
+.filter((a:any)=>a&&a.name&&a.id)
+.map((a:any)=>({
+name:a.name,
+id:a.id,
+icon:a.icon?`data:image/png;base64,${a.icon}`:"",
+path:""
 }))
 .filter(
-(app,index,self)=>
-index===self.findIndex(
-a=>a.id===app.id
-)
+(a:WindowsApp,index:number,self:WindowsApp[])=>
+index===self.findIndex(x=>x.id===a.id)
 );
-
-
-installedAppsCache=list;
 
 resolve(list);
 
-
 }catch{
-
 resolve([]);
-
 }
 
 }
-
 );
 
+});
+}
+
+// Lightweight fallback (no icons) - fast and reliable, used only if the
+// icon-enabled fetch above fails or times out on a particular machine.
+function runPowerShellStartAppsFallback():Promise<WindowsApp[]>{
+return new Promise((resolve)=>{
+
+exec(
+`powershell -NoProfile -NonInteractive -Command "Get-StartApps | ConvertTo-Json -Compress"`,
+{maxBuffer:1024*1024*20,timeout:10000},
+(error,stdout)=>{
+
+if(error||!stdout){
+resolve([]);
+return;
+}
+
+try{
+
+const data=JSON.parse(stdout);
+const apps=Array.isArray(data)?data:[data];
+
+const list=apps
+.filter((a:any)=>a.Name&&a.AppID)
+.map((a:any)=>({name:a.Name,id:a.AppID,icon:"",path:""}))
+.filter(
+(a:WindowsApp,index:number,self:WindowsApp[])=>
+index===self.findIndex(x=>x.id===a.id)
+);
+
+resolve(list);
+
+}catch{
+resolve([]);
+}
+
+}
+);
+
+});
+}
+
+async function fetchInstalledAppsFresh():Promise<WindowsApp[]>{
+const withIcons=await runPowerShellAppsWithIcons();
+if(withIcons.length>0)return withIcons;
+return await runPowerShellStartAppsFallback();
+}
+
+/* ================= public: installed apps (fast, cached) ================= */
+
+// Always resolves immediately from memory/disk cache when available, and
+// only refreshes in the background when the cache is stale. This is what
+// keeps the launcher smooth - the heavy PowerShell scan almost never blocks
+// the UI thread of the renderer.
+export function getInstalledApps():Promise<WindowsApp[]>{
+
+if(installedAppsCache){
+maybeRefreshInBackground();
+return Promise.resolve(installedAppsCache);
+}
+
+const disk=readAppsCacheFromDisk();
+
+if(disk&&disk.apps.length>0){
+installedAppsCache=disk.apps;
+maybeRefreshInBackground();
+return Promise.resolve(disk.apps);
+}
+
+return fetchInstalledAppsFresh().then(apps=>{
+installedAppsCache=apps;
+writeAppsCacheToDisk(apps);
+return apps;
 });
 
 }
 
+function maybeRefreshInBackground(){
+
+if(backgroundRefreshInFlight)return;
+
+const disk=readAppsCacheFromDisk();
+const stale=!disk||(Date.now()-disk.ts)>CACHE_TTL_MS;
+
+if(!stale)return;
+
+backgroundRefreshInFlight=true;
+
+fetchInstalledAppsFresh()
+.then(apps=>{
+if(apps.length>0){
+installedAppsCache=apps;
+writeAppsCacheToDisk(apps);
+}
+})
+.finally(()=>{
+backgroundRefreshInFlight=false;
+});
+
+}
 
 export function clearAppsCache(){
 installedAppsCache=null;
+try{fs.unlinkSync(APPS_CACHE_FILE);}catch{}
 }
-
 
 export function launchSystemApp(appId:string):Promise<boolean>{
 
 return new Promise((resolve)=>{
 
 exec(
-`powershell -Command "Start-Process 'shell:AppsFolder\\${appId}'"`,
+`powershell -NoProfile -Command "Start-Process 'shell:AppsFolder\\${appId}'"`,
 (error)=>{
 
 if(error){
@@ -96,10 +273,173 @@ resolve(true);
 
 });
 
+
 }
 
+/* ================= launcher library: add / remove / pin / edit icon ================= */
+// One list is the single source of truth:
+//  - the "System icon" panel (next to the V logo) shows every app the user
+//    has added here (via Settings -> Add System App)
+//  - the taskbar quick row shows only the ones with pinned=true
+// Right-click inside the System icon panel: Pin/Unpin, Edit icon, Remove.
 
-/* VOICE APP MAP */
+function readLibrary():LibraryApp[]{
+try{
+if(!fs.existsSync(LIBRARY_FILE))return [];
+return JSON.parse(fs.readFileSync(LIBRARY_FILE,"utf-8"));
+}catch{
+return [];
+}
+}
+
+function writeLibrary(list:LibraryApp[]){
+try{
+fs.mkdirSync(path.dirname(LIBRARY_FILE),{recursive:true});
+fs.writeFileSync(LIBRARY_FILE,JSON.stringify(list));
+}catch{
+/* best-effort persistence */
+}
+}
+
+// Full "added by user" list - backs the System icon panel.
+export function getLibraryApps():LibraryApp[]{
+return readLibrary();
+}
+
+// Subset that shows directly on the taskbar - backs the quick row.
+export function getPinnedApps():LibraryApp[]{
+return readLibrary().filter(a=>a.pinned);
+}
+
+// Bulk add from the Settings "Add System App" picker (checkbox multi-select).
+export function addLibraryApps(newApps:WindowsApp[]):LibraryApp[]{
+const list=readLibrary();
+
+for(const newApp of newApps){
+if(!list.find(a=>a.id===newApp.id)){
+list.push({
+name:newApp.name,
+id:newApp.id,
+icon:newApp.icon,
+path:newApp.path||"",
+pinned:false
+});
+}
+}
+
+writeLibrary(list);
+return list;
+}
+
+// Removes an app from the library entirely (also drops it off the taskbar,
+// since the taskbar row is just a filtered view of this same list).
+export function removeLibraryApp(id:string):LibraryApp[]{
+const list=readLibrary().filter(a=>a.id!==id);
+writeLibrary(list);
+return list;
+}
+
+// Used for drag-to-reorder in the taskbar. Places the given ids first (in
+// the order provided), then appends anything not mentioned, preserving its
+// original relative order.
+export function reorderLibraryApps(orderedIds:string[]):LibraryApp[]{
+const list=readLibrary();
+const byId=new Map(list.map(a=>[a.id,a]));
+const reordered:LibraryApp[]=[];
+
+for(const id of orderedIds){
+const item=byId.get(id);
+if(item){
+reordered.push(item);
+byId.delete(id);
+}
+}
+
+for(const a of list){
+if(byId.has(a.id))reordered.push(a);
+}
+
+writeLibrary(reordered);
+return reordered;
+}
+
+// Toggle whether an already-added app also shows on the taskbar quick row.
+export function setLibraryAppPinned(id:string,pinned:boolean):LibraryApp[]{
+const list=readLibrary().map(a=>a.id===id?{...a,pinned}:a);
+writeLibrary(list);
+return list;
+}
+
+// Opens a native "choose an image" dialog and stores the picked image as the
+// custom icon for a library app (small base64 data URL, no extra IPC/file
+// wiring needed on the renderer side).
+// Generic "choose an image, return it as a data URL" - reusable anywhere an
+// icon needs to be customized (system apps, internal launcher apps, etc.)
+export async function pickImageAsDataUrl():Promise<string|null>{
+
+const result=await dialog.showOpenDialog({
+title:"Choose icon",
+filters:[{name:"Images",extensions:["png","jpg","jpeg","ico","webp"]}],
+properties:["openFile"]
+});
+
+if(result.canceled||!result.filePaths[0]){
+return null;
+}
+
+try{
+
+const filePath=result.filePaths[0];
+const ext=(path.extname(filePath).slice(1)||"png").toLowerCase();
+const buf=fs.readFileSync(filePath);
+return `data:image/${ext};base64,${buf.toString("base64")}`;
+
+}catch{
+return null;
+}
+
+}
+
+export async function pickAndSetLibraryIcon(id:string):Promise<LibraryApp[]>{
+
+const dataUrl=await pickImageAsDataUrl();
+
+if(!dataUrl){
+return readLibrary();
+}
+
+const list=readLibrary().map(a=>a.id===id?{...a,customIcon:dataUrl}:a);
+writeLibrary(list);
+return list;
+
+}
+
+// Generic "choose an image, get a data URL back" - used for anything that
+// isn't part of the library-apps list (e.g. a custom icon for one of the
+// launcher's own built-in pages).
+export async function pickIconFile():Promise<string|null>{
+
+const result=await dialog.showOpenDialog({
+title:"Choose icon",
+filters:[{name:"Images",extensions:["png","jpg","jpeg","ico","webp"]}],
+properties:["openFile"]
+});
+
+if(result.canceled||!result.filePaths[0]){
+return null;
+}
+
+try{
+const filePath=result.filePaths[0];
+const ext=(path.extname(filePath).slice(1)||"png").toLowerCase();
+const buf=fs.readFileSync(filePath);
+return `data:image/${ext};base64,${buf.toString("base64")}`;
+}catch{
+return null;
+}
+
+}
+
 
 const appMap:Record<string,string>={
 chrome:"chrome",

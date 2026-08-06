@@ -81,6 +81,9 @@ color:#e8f7fc;
 background:rgba(0,229,255,.14);
 color:#00e5ff;
 }
+.taskbar-icon.dragging{
+opacity:.35;
+}
 .running-dot{
 position:absolute;
 bottom:2px;
@@ -106,28 +109,14 @@ animation:tb-mic-pulse 1.2s infinite;
 .taskbar-tray{
 display:flex;
 align-items:center;
-gap:12px;
+gap:6px;
 padding:6px 14px;
 border-radius:14px;
 background:rgba(255,255,255,.03);
 border:1px solid rgba(255,255,255,.06);
 color:#8fb8cc;
 margin-left:auto;
-}
-.tray-clock{
-display:flex;
-flex-direction:column;
-align-items:flex-end;
-line-height:1.2;
-}
-.tray-clock span:first-child{
-font-size:12px;
-font-weight:600;
-color:#e8f7fc;
-}
-.tray-date{
-font-size:10px;
-color:#7fb8cc;
+position:relative;
 }
 .taskbar-overlay{
 position:fixed;
@@ -230,4 +219,129 @@ color:#fff;
     height:32px;
     object-fit:contain;
     border-radius:6px;
+}
+
+.app-icon-fallback{
+display:flex;
+align-items:center;
+justify-content:center;
+border-radius:8px;
+background:rgba(0,229,255,.08);
+color:#5fb8d6;
+}
+
+.system-tile{
+position:relative;
+}
+
+.pinned-badge{
+position:absolute;
+top:6px;
+right:6px;
+width:18px;
+height:18px;
+display:flex;
+align-items:center;
+justify-content:center;
+border-radius:50%;
+background:rgba(0,229,255,.18);
+border:1px solid rgba(0,229,255,.4);
+color:#00e5ff;
+}
+
+.app-search{
+display:flex;
+align-items:center;
+gap:8px;
+padding:8px 12px;
+margin-bottom:12px;
+border-radius:10px;
+background:rgba(255,255,255,.04);
+border:1px solid rgba(255,255,255,.07);
+color:#7fb8cc;
+}
+.app-search input{
+flex:1;
+background:none;
+border:none;
+outline:none;
+color:#e8f7fc;
+font-size:12.5px;
+}
+.app-search input::placeholder{
+color:#5f8ea3;
+}
+
+.apps-loading,.apps-empty{
+padding:30px 10px;
+text-align:center;
+font-size:12.5px;
+color:#6fa3b8;
+line-height:1.6;
+}
+
+.taskbar-divider{
+width:1px;
+align-self:stretch;
+margin:4px 2px;
+background:rgba(255,255,255,.1);
+}
+
+.pinned-app-wrap{
+position:relative;
+display:flex;
+}
+
+.library-tile-wrap{
+width:100%;
+}
+.library-tile-wrap .start-tile{
+width:100%;
+}
+
+.taskbar-icon.pinned-app{
+width:36px;
+}
+
+.pinned-app-menu{
+position:absolute;
+bottom:44px;
+left:50%;
+transform:translateX(-50%);
+min-width:140px;
+background:linear-gradient(180deg,rgba(10,24,44,.98),rgba(5,12,24,.99));
+border:1px solid rgba(0,229,255,.2);
+border-radius:10px;
+box-shadow:0 12px 30px rgba(0,0,0,.5);
+padding:6px;
+display:flex;
+flex-direction:column;
+gap:2px;
+z-index:280;
+animation:start-in .12s ease;
+}
+.library-menu{
+bottom:auto;
+top:calc(100% + 6px);
+}
+.pinned-app-menu button{
+display:flex;
+align-items:center;
+gap:8px;
+padding:7px 10px;
+border-radius:7px;
+background:none;
+border:none;
+color:#cdeeff;
+font-size:12px;
+cursor:pointer;
+text-align:left;
+white-space:nowrap;
+}
+.pinned-app-menu button:hover{
+background:rgba(0,229,255,.1);
+}
+.pinned-app-menu button.danger:hover{
+background:rgba(255,80,80,.15);
+color:#ff8080;
 }

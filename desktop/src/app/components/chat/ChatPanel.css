@@ -311,6 +311,16 @@
 
 }
 
+.vision-btn{
+    color:#c084fc;
+    border-color:rgba(192,132,252,.25);
+    background:rgba(192,132,252,.06);
+}
+.vision-btn:hover{
+    background:rgba(192,132,252,.15);
+    box-shadow:0 0 14px rgba(192,132,252,.25);
+}
+
 @keyframes mic-pulse-btn{
     0%{ box-shadow:0 0 0 0 rgba(255,46,109,.4); }
     70%{ box-shadow:0 0 0 10px rgba(255,46,109,0); }

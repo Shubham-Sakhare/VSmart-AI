@@ -10,6 +10,12 @@ maximize:()=>ipcRenderer.send("window-maximize"),
 
 close:()=>ipcRenderer.send("window-close"),
 
+onToggleStart:(callback:()=>void)=>{
+const handler=()=>callback();
+ipcRenderer.on("shortcut:toggle-start",handler);
+return()=>ipcRenderer.removeListener("shortcut:toggle-start",handler);
+},
+
 saveMemory:(key:string,value:string)=>
 ipcRenderer.invoke("memory-save",key,value),
 
@@ -49,6 +55,44 @@ ipcRenderer.invoke("get-installed-apps"),
 
 launchSystemApp:(appId:string)=>
 ipcRenderer.invoke("launch-system-app",appId),
+
+
+vision:{
+
+captureScreen:()=>
+ipcRenderer.invoke("vision:captureScreen")
+
+},
+
+
+launcher:{
+
+getLibraryApps:()=>
+ipcRenderer.invoke("launcher:getLibraryApps"),
+
+getPinnedApps:()=>
+ipcRenderer.invoke("launcher:getPinnedApps"),
+
+addLibraryApps:(apps:{name:string;id:string;icon:string;path?:string}[])=>
+ipcRenderer.invoke("launcher:addLibraryApps",apps),
+
+removeLibraryApp:(id:string)=>
+ipcRenderer.invoke("launcher:removeLibraryApp",id),
+
+reorderLibraryApps:(orderedIds:string[])=>
+ipcRenderer.invoke("launcher:reorderLibraryApps",orderedIds),
+
+setPinned:(id:string,pinned:boolean)=>
+ipcRenderer.invoke("launcher:setPinned",id,pinned),
+
+pickIcon:(id:string)=>
+ipcRenderer.invoke("launcher:pickIcon",id),
+
+pickImage:()=>
+ipcRenderer.invoke("launcher:pickImage")
+
+},
+
 
 
 

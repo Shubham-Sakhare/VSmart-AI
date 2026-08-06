@@ -83,6 +83,7 @@ export default function MainLayout() {
   const [conversationsLoaded, setConversationsLoaded] = useState(false);
   const [replyLang, setReplyLang] = useState<ReplyLang>("en");
   const [wakeWordEnabled, setWakeWordEnabled] = useState(false);
+  const [historyTrigger, setHistoryTrigger] = useState(0);
 
   const [sidebarEnabled, setSidebarEnabled] = useState(true);
   const [sidebarItems, setSidebarItems] = useState<SidebarItem[]>(DEFAULT_SIDEBAR_ITEMS);
@@ -252,6 +253,7 @@ export default function MainLayout() {
     if (page === "conversations") {
       setChatOpen(true);
       setChatMinimized(false);
+      setHistoryTrigger(t => t + 1);
       return;
     }
     setActivePage(page);
@@ -325,6 +327,7 @@ export default function MainLayout() {
         onSelectConversation={selectConversation}
         onDeleteConversation={deleteConversation}
         onDeleteConversations={deleteConversations}
+        historyTrigger={historyTrigger}
       />
 
       <SettingsPanel

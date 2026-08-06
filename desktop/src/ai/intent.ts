@@ -13,6 +13,18 @@ export function detectIntent(text: string): Intent {
     return "memory";
   }
 
+  // Vision — "what's on my screen" style questions, checked before the
+  // generic system rule so it doesn't get swallowed by the plain
+  // screenshot-to-file action.
+  if (
+    /\b(what'?s on (my |the )?screen|whats on (my |the )?screen)\b/.test(input) ||
+    /\b(look at (my |the )?screen|check (my |the )?screen)\b/.test(input) ||
+    /\b(explain (my |the )?screen|screen explain karo)\b/.test(input) ||
+    /\b(screen dekho|screen dekh|mera screen dekho|screen samjhao|screen batao|is screen (pe|par) kya hai)\b/.test(input)
+  ) {
+    return "vision";
+  }
+
   // File
   if (
     input.includes(".pdf") ||

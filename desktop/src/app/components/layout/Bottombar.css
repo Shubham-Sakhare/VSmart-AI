@@ -16,37 +16,7 @@ border-top:1px solid rgba(0,255,255,.12);
 
 }
 
-.bottombar-pill{
 
-display:flex;
-
-align-items:center;
-
-gap:8px;
-
-padding:8px 14px;
-
-border-radius:12px;
-
-background:#0d1d30;
-
-border:1px solid rgba(0,255,255,.1);
-
-color:#8bdcff;
-
-font-size:12px;
-
-white-space:nowrap;
-
-}
-
-.bottombar-pill strong{
-
-color:white;
-
-font-weight:600;
-
-}
 
 .talk-btn{
 

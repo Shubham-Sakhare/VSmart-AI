@@ -1,5 +1,5 @@
 ﻿import "./bottombar.css";
-import { MapPin, CloudSun, Wifi, PlayCircle } from "lucide-react";
+import { PlayCircle } from "lucide-react";
 import type { VoiceControls } from "../../voice/useVoice";
 
 interface BottomBarProps {
@@ -16,24 +16,6 @@ export default function BottomBar({ voice }: BottomBarProps) {
 
   return (
     <footer className="bottombar">
-
-      <div className="bottombar-pill">
-        <MapPin size={14} />
-        <span>Location</span>
-        <strong>Local</strong>
-      </div>
-
-      <div className="bottombar-pill">
-        <CloudSun size={14} />
-        <span>Weather</span>
-        <strong>-</strong>
-      </div>
-
-      <div className="bottombar-pill">
-        <Wifi size={14} />
-        <span>Network</span>
-        <strong>Online</strong>
-      </div>
 
       <button
         className={voice.listening ? "talk-btn active" : "talk-btn"}

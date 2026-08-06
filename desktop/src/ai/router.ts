@@ -3,6 +3,7 @@ import { memoryAgent } from "../agents/memoryAgent";
 import { chatAgent } from "../agents/chatAgent";
 import { systemAgent } from "../agents/systemAgent";
 import { codingAgent } from "../agents/codingAgent";
+import { visionAgent } from "../agents/visionAgent";
 import { speak } from "../app/voice/useVoice";
 import type { ReplyLang } from "../llm/openrouter";
 import type { Plan } from "./types";
@@ -225,6 +226,21 @@ export async function route(
         success: true,
         action: "system.open",
         message: [result, template.done[lang]].filter(Boolean).join(" ")
+      };
+    }
+
+    case "vision": {
+      speak(
+        lang === "hi" ? "ओके बॉस, स्क्रीन देख रहा हूँ..." : "Ok Boss, looking at your screen...",
+        lang === "hi" ? "hi-IN" : "en-IN"
+      );
+
+      const result = await visionAgent(command, lang);
+
+      return {
+        success: true,
+        action: "vision.analyze",
+        message: result
       };
     }
 

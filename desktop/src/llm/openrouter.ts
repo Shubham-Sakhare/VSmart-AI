@@ -16,6 +16,15 @@ const CODER_MODELS = [
   "google/gemma-3-4b-it:free",
 ];
 
+// Free, vision-capable models on OpenRouter (accept image_url content) — used
+// for Screen Vision. Kept as a short fallback chain since free-tier vision
+// model availability shifts over time.
+const VISION_MODELS = [
+  "google/gemma-4-31b-it:free",
+  "google/gemma-4-26b-a4b-it:free",
+  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+];
+
 const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
 
 function languageInstruction(lang: ReplyLang): string {
@@ -24,10 +33,15 @@ function languageInstruction(lang: ReplyLang): string {
     : "Always reply only in English.";
 }
 
-async function callOpenRouterOnce(
+type MessageContent =
+  | string
+  | { type: "text"; text: string }[]
+  | ({ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } })[];
+
+async function callOpenRouterWithContent(
   apiKey: string,
   model: string,
-  prompt: string,
+  content: MessageContent,
   lang: ReplyLang
 ): Promise<string> {
   const controller = new AbortController();
@@ -57,7 +71,7 @@ async function callOpenRouterOnce(
           },
           {
             role: "user",
-            content: prompt,
+            content,
           },
         ],
         temperature: 0.7,
@@ -90,6 +104,15 @@ async function callOpenRouterOnce(
   }
 }
 
+async function callOpenRouterOnce(
+  apiKey: string,
+  model: string,
+  prompt: string,
+  lang: ReplyLang
+): Promise<string> {
+  return callOpenRouterWithContent(apiKey, model, prompt, lang);
+}
+
 async function callWithFallback(
   apiKey: string,
   models: string[],
@@ -115,6 +138,40 @@ async function callWithFallback(
   throw lastError ?? new Error("All OpenRouter models failed.");
 }
 
+async function callWithVisionFallback(
+  apiKey: string,
+  models: string[],
+  prompt: string,
+  imageDataUrl: string,
+  lang: ReplyLang
+): Promise<string> {
+  if (!apiKey) {
+    throw new Error("OpenRouter API Key missing.");
+  }
+
+  let lastError: unknown;
+
+  for (const model of models) {
+    try {
+      return await callOpenRouterWithContent(
+        apiKey,
+        model,
+        [
+          { type: "text", text: prompt },
+          { type: "image_url", image_url: { url: imageDataUrl } },
+        ],
+        lang
+      );
+    } catch (err) {
+      console.warn(`❌ ${model} (vision) failed`);
+      console.error(err);
+      lastError = err;
+    }
+  }
+
+  throw lastError ?? new Error("All OpenRouter vision models failed.");
+}
+
 export async function askHunyuan(
   prompt: string,
   lang: ReplyLang = "en"
@@ -127,6 +184,16 @@ export async function askQwenCoder(
   lang: ReplyLang = "en"
 ): Promise<string> {
   return callWithFallback(apiKey, CODER_MODELS, prompt, lang);
+}
+
+// Screen Vision: sends a screenshot (as a data URL) alongside a question to
+// a vision-capable free model.
+export async function askVision(
+  prompt: string,
+  imageDataUrl: string,
+  lang: ReplyLang = "en"
+): Promise<string> {
+  return callWithVisionFallback(apiKey, VISION_MODELS, prompt, imageDataUrl, lang);
 }
 
 export function isCodingPrompt(prompt: string): boolean {
