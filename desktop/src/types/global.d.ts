@@ -15,7 +15,24 @@ saveMemory:(key:string,value:string)=>Promise<any>;
 getMemory:(key:string)=>Promise<any>;
 getAllMemory:()=>Promise<any>;
 
-writeCode:(code:string,language?:string)=>Promise<string>;
+longMemory:{
+saveFact:(key:string,value:string)=>Promise<boolean>;
+getFact:(key:string)=>Promise<string|null>;
+searchFacts:(query:string,topK?:number)=>Promise<{
+key:string;
+value:string;
+score:number;
+}[]>;
+getAllFacts:()=>Promise<{
+key:string;
+value:string;
+created_at:string;
+updated_at:string;
+}[]>;
+deleteFact:(key:string)=>Promise<boolean>;
+};
+
+writeCode:(code:string,language?:string,filename?:string)=>Promise<string>;
 
 systemControl:(action:string,value?:string|number)=>Promise<string>;
 
@@ -47,6 +64,40 @@ launchSystemApp:(appId:string)=>Promise<boolean>;
 
 vision:{
 captureScreen:()=>Promise<string|null>;
+};
+
+project:{
+create:(folderName:string,files:{path:string;content:string}[])=>Promise<{
+ok:boolean;
+projectPath:string|null;
+}>;
+writeFiles:(projectPath:string,files:{path:string;content:string}[])=>Promise<boolean>;
+openInVSCode:(projectPath:string)=>Promise<boolean>;
+readFile:(projectPath:string,relativePath:string)=>Promise<string|null>;
+listFiles:(projectPath:string)=>Promise<string[]>;
+runCommand:(projectPath:string,command:string)=>Promise<{
+stdout:string;
+stderr:string;
+exitCode:number|null;
+}>;
+};
+
+fileSearch:{
+search:(query:string)=>Promise<{
+name:string;
+path:string;
+modified:string|null;
+}[]>;
+openFile:(path:string)=>Promise<boolean>;
+openLocation:(path:string)=>Promise<boolean>;
+};
+
+desktopControl:{
+move:(x:number,y:number)=>Promise<boolean>;
+click:(x:number,y:number,button:"left"|"right",doubleClick:boolean)=>Promise<boolean>;
+getCursor:()=>Promise<{x:number;y:number}|null>;
+type:(text:string)=>Promise<boolean>;
+pressKey:(combo:string)=>Promise<boolean>;
 };
 
 launcher:{
@@ -116,6 +167,9 @@ cpu:number;
 ram:number;
 storage:number;
 }>;
+searchYoutube:(query:string)=>Promise<string>;
+getChromeProfiles:()=>Promise<{name:string;directory:string}[]>;
+openChromeProfile:(directory:string)=>Promise<boolean>;
 };
 
 voice:{

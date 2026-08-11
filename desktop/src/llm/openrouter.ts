@@ -186,6 +186,42 @@ export async function askQwenCoder(
   return callWithFallback(apiKey, CODER_MODELS, prompt, lang);
 }
 
+// Asks the coder model to plan out an entire small project (folder name +
+// multiple files + optional setup commands) as strict JSON, so the coding
+// agent can create a real multi-file project rather than a single file.
+export async function askQwenCoderProject(request: string): Promise<string> {
+  const prompt =
+    `Plan a small project for this request: "${request}"\n\n` +
+    `Respond with ONLY valid JSON (no markdown fences, no explanation) in exactly this shape:\n` +
+    `{"projectFolder":"short-kebab-case-name","files":[{"path":"relative/file/path.ext","content":"full file content"}],"commands":["optional shell command to run after creating the files, e.g. npm install"]}\n\n` +
+    `Rules: keep the project minimal and focused on exactly what was asked. ` +
+    `Use relative paths only. Include real, working code in "content" (escaped for JSON), not placeholders. ` +
+    `Only include "commands" if the project genuinely needs a setup step (e.g. npm install for a package.json-based project) - otherwise use an empty array.`;
+
+  return callWithFallback(apiKey, CODER_MODELS, prompt, "en");
+}
+
+// Asks the coder model to review existing project files for bugs and
+// return both a plain-English explanation and (if fixes are needed) the
+// corrected files as strict JSON.
+export async function askQwenCoderReview(
+  request: string,
+  files: { path: string; content: string }[]
+): Promise<string> {
+  const filesBlock = files
+    .map(f => `--- ${f.path} ---\n${f.content}`)
+    .join("\n\n");
+
+  const prompt =
+    `Review this project's code for bugs. User's request: "${request}"\n\n` +
+    `${filesBlock}\n\n` +
+    `Respond with ONLY valid JSON (no markdown fences, no explanation outside the JSON) in exactly this shape:\n` +
+    `{"summary":"plain-English summary of what you found, 2-4 sentences","fixedFiles":[{"path":"relative/file/path.ext","content":"corrected full file content"}]}\n\n` +
+    `Only include a file in "fixedFiles" if you actually changed something in it. If there are no bugs, return an empty "fixedFiles" array.`;
+
+  return callWithFallback(apiKey, CODER_MODELS, prompt, "en");
+}
+
 // Screen Vision: sends a screenshot (as a data URL) alongside a question to
 // a vision-capable free model.
 export async function askVision(

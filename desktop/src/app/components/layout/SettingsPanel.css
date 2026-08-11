@@ -7,7 +7,7 @@
     align-items:center;
     justify-content:flex-end;
     padding:20px;
-    z-index:300;
+    z-index:1040;
     animation:overlay-in .2s ease;
 }
 @keyframes overlay-in{

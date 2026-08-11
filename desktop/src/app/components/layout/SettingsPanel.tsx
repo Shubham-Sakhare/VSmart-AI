@@ -36,6 +36,8 @@ interface SettingsPanelProps {
   onSidebarChange: (enabled: boolean, items: SidebarItem[]) => void;
 }
 
+type TaskbarPosition = "bottom" | "top" | "left" | "right";
+
 export default function SettingsPanel({
   open,
   onClose,
@@ -60,12 +62,17 @@ export default function SettingsPanel({
   const [adding, setAdding] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
 
-  // Add Launcher App (internal pages: Dashboard, Analysis, Tasks, etc.)
+  // Add Launcher App
   const [addPagesOpen, setAddPagesOpen] = useState(false);
   const [launcherState, setLauncherState] = useState<LauncherAppsState>(DEFAULT_LAUNCHER_STATE);
   const [selectedPages, setSelectedPages] = useState<Set<Page>>(new Set());
   const [addingPages, setAddingPages] = useState(false);
   const [pagesJustAdded, setPagesJustAdded] = useState(false);
+
+  // Taskbar settings
+  const [taskbarOpen, setTaskbarOpen] = useState(false);
+  const [taskbarPos, setTaskbarPos] = useState<TaskbarPosition>("bottom");
+  const [taskbarAutoHide, setTaskbarAutoHide] = useState(false);
 
   useEffect(() => {
     if (!open || !("speechSynthesis" in window)) return;
@@ -77,20 +84,39 @@ export default function SettingsPanel({
   useEffect(() => {
     if (!addAppsOpen || allApps.length > 0) return;
     setAppsLoading(true);
-    window.vsmart.getInstalledApps()
+    window.vsmart
+      .getInstalledApps()
       .then(setAllApps)
       .catch(() => setAllApps([]))
       .finally(() => setAppsLoading(false));
   }, [addAppsOpen, allApps.length]);
 
-  // Refresh every time this section opens, so removals made from the V-logo
-  // panel are reflected here right away.
   useEffect(() => {
     if (!addPagesOpen) return;
-    window.vsmart.getMemory(LAUNCHER_APPS_KEY)
-      .then(raw => setLauncherState(parseLauncherState(raw)))
+    window.vsmart
+      .getMemory(LAUNCHER_APPS_KEY)
+      .then((raw) => setLauncherState(parseLauncherState(raw)))
       .catch(() => setLauncherState(DEFAULT_LAUNCHER_STATE));
   }, [addPagesOpen]);
+
+  // Load taskbar settings when panel opens
+  useEffect(() => {
+    if (!open) return;
+
+    window.vsmart
+      .getMemory("vsmart_taskbar_position")
+      .then((raw) => {
+        if (raw === "top" || raw === "left" || raw === "right" || raw === "bottom") {
+          setTaskbarPos(raw);
+        }
+      })
+      .catch(() => {});
+
+    window.vsmart
+      .getMemory("vsmart_taskbar_autohide")
+      .then((raw) => setTaskbarAutoHide(raw === "1" || raw === "true"))
+      .catch(() => {});
+  }, [open]);
 
   if (!open) return null;
 
@@ -100,20 +126,18 @@ export default function SettingsPanel({
   };
 
   const toggleSidebarItem = (page: Page) => {
-    const updated = sidebarItems.map(item =>
-      item.page === page
-        ? { ...item, enabled: !item.enabled }
-        : item
+    const updated = sidebarItems.map((item) =>
+      item.page === page ? { ...item, enabled: !item.enabled } : item
     );
     onSidebarChange(sidebarEnabled, updated);
   };
 
-  const filteredApps = allApps.filter(a =>
+  const filteredApps = allApps.filter((a) =>
     a.name.toLowerCase().includes(appSearch.trim().toLowerCase())
   );
 
   const toggleAppSelected = (id: string) => {
-    setSelectedIds(prev => {
+    setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -125,7 +149,7 @@ export default function SettingsPanel({
     if (selectedIds.size === 0) return;
     setAdding(true);
     try {
-      const toAdd = allApps.filter(a => selectedIds.has(a.id));
+      const toAdd = allApps.filter((a) => selectedIds.has(a.id));
       await window.vsmart.launcher.addLibraryApps(toAdd);
       setSelectedIds(new Set());
       setJustAdded(true);
@@ -135,13 +159,12 @@ export default function SettingsPanel({
     }
   };
 
-  // Only offer catalog pages that aren't already showing in the V-logo panel.
   const availablePages = LAUNCHER_CATALOG.filter(
-    entry => !launcherState.added.includes(entry.page)
+    (entry) => !launcherState.added.includes(entry.page)
   );
 
   const togglePageSelected = (page: Page) => {
-    setSelectedPages(prev => {
+    setSelectedPages((prev) => {
       const next = new Set(prev);
       if (next.has(page)) next.delete(page);
       else next.add(page);
@@ -167,23 +190,43 @@ export default function SettingsPanel({
     }
   };
 
+  const handlePositionChange = (pos: TaskbarPosition) => {
+  setTaskbarPos(pos);
+  window.vsmart.saveMemory("vsmart_taskbar_position", pos).catch(() => {});
+  // TaskBar ko turant batao
+  window.dispatchEvent(
+    new CustomEvent("vsmart-taskbar-settings", {
+      detail: { position: pos }
+    })
+  );
+};
+
+const handleAutoHideChange = (enabled: boolean) => {
+  setTaskbarAutoHide(enabled);
+  window.vsmart.saveMemory("vsmart_taskbar_autohide", enabled ? "1" : "0").catch(() => {});
+  window.dispatchEvent(
+    new CustomEvent("vsmart-taskbar-settings", {
+      detail: { autoHide: enabled }
+    })
+  );
+};
+
   return (
     <div className="settings-overlay" onClick={onClose}>
-      <div className="settings-panel" onClick={e => e.stopPropagation()}>
-
+      <div className="settings-panel" onClick={(e) => e.stopPropagation()}>
         <div className="settings-header">
           <div className="settings-title">
-            <SettingsIcon size={16}/>
+            <SettingsIcon size={16} />
             <span>Settings</span>
           </div>
 
           <button className="settings-close" onClick={onClose}>
-            <X size={16}/>
+            <X size={16} />
           </button>
         </div>
 
         <div className="settings-body">
-
+          {/* Reply Language */}
           <div className="settings-row">
             <div className="settings-label">
               <strong>Reply Language</strong>
@@ -191,11 +234,22 @@ export default function SettingsPanel({
             </div>
 
             <div className="settings-control lang-toggle-settings">
-              <button className={replyLang==="en"?"lang-btn active":"lang-btn"} onClick={()=>onLangChange("en")}>EN</button>
-              <button className={replyLang==="hi"?"lang-btn active":"lang-btn"} onClick={()=>onLangChange("hi")}>HI</button>
+              <button
+                className={replyLang === "en" ? "lang-btn active" : "lang-btn"}
+                onClick={() => onLangChange("en")}
+              >
+                EN
+              </button>
+              <button
+                className={replyLang === "hi" ? "lang-btn active" : "lang-btn"}
+                onClick={() => onLangChange("hi")}
+              >
+                HI
+              </button>
             </div>
           </div>
 
+          {/* AI Voice */}
           <div className="settings-row">
             <div className="settings-label">
               <strong>AI Voice</strong>
@@ -203,9 +257,13 @@ export default function SettingsPanel({
             </div>
 
             <div className="settings-control">
-              <select className="voice-select" value={selectedVoice} onChange={e=>handleVoiceChange(e.target.value)}>
+              <select
+                className="voice-select"
+                value={selectedVoice}
+                onChange={(e) => handleVoiceChange(e.target.value)}
+              >
                 <option value="">Auto (recommended)</option>
-                {voices.map(v=>(
+                {voices.map((v) => (
                   <option key={v.name} value={v.name}>
                     {v.name} ({v.lang})
                   </option>
@@ -214,30 +272,33 @@ export default function SettingsPanel({
             </div>
           </div>
 
+          {/* Wake Word */}
           <div className="settings-row">
             <div className="settings-label">
               <strong>Wake Word</strong>
               <span>Hands-free — say "VSmart" anytime.</span>
             </div>
 
-            <button className={wakeWordEnabled?"switch on":"switch"} onClick={()=>onWakeWordChange(!wakeWordEnabled)}>
-              <span className="switch-knob"/>
+            <button
+              className={wakeWordEnabled ? "switch on" : "switch"}
+              onClick={() => onWakeWordChange(!wakeWordEnabled)}
+            >
+              <span className="switch-knob" />
             </button>
           </div>
 
+          {/* Sidebar Settings */}
           <div className="sidebar-settings-box">
-
             <button
               className="sidebar-dropdown"
-              onClick={()=>setSidebarOpen(!sidebarOpen)}
+              onClick={() => setSidebarOpen(!sidebarOpen)}
             >
               <span>Sidebar Settings</span>
-              <ChevronDown size={16} className={sidebarOpen?"rotate":""}/>
+              <ChevronDown size={16} className={sidebarOpen ? "rotate" : ""} />
             </button>
 
             {sidebarOpen && (
               <div className="sidebar-dropdown-content">
-
                 <div className="settings-row">
                   <div className="settings-label">
                     <strong>Enable Sidebar</strong>
@@ -245,80 +306,76 @@ export default function SettingsPanel({
                   </div>
 
                   <button
-                    className={sidebarEnabled?"switch on":"switch"}
-                    onClick={()=>onSidebarChange(!sidebarEnabled,sidebarItems)}
+                    className={sidebarEnabled ? "switch on" : "switch"}
+                    onClick={() => onSidebarChange(!sidebarEnabled, sidebarItems)}
                   >
-                    <span className="switch-knob"/>
+                    <span className="switch-knob" />
                   </button>
                 </div>
 
-                {sidebarEnabled && sidebarItems.map(item=>(
-                  <div className="settings-row" key={item.page}>
+                {sidebarEnabled &&
+                  sidebarItems.map((item) => (
+                    <div className="settings-row" key={item.page}>
+                      <div className="settings-label">
+                        <strong>{item.label}</strong>
+                      </div>
 
-                    <div className="settings-label">
-                      <strong>{item.label}</strong>
+                      <button
+                        className={item.enabled ? "switch on" : "switch"}
+                        onClick={() => toggleSidebarItem(item.page)}
+                      >
+                        <span className="switch-knob" />
+                      </button>
                     </div>
-
-                    <button
-                      className={item.enabled?"switch on":"switch"}
-                      onClick={()=>toggleSidebarItem(item.page)}
-                    >
-                      <span className="switch-knob"/>
-                    </button>
-
-                  </div>
-                ))}
-
+                  ))}
               </div>
             )}
-
           </div>
 
+          {/* Add System App */}
           <div className="sidebar-settings-box">
-
             <button
               className="sidebar-dropdown"
-              onClick={()=>setAddAppsOpen(!addAppsOpen)}
+              onClick={() => setAddAppsOpen(!addAppsOpen)}
             >
               <span>Add System App</span>
-              <ChevronDown size={16} className={addAppsOpen?"rotate":""}/>
+              <ChevronDown size={16} className={addAppsOpen ? "rotate" : ""} />
             </button>
 
             {addAppsOpen && (
               <div className="sidebar-dropdown-content">
-
                 <div className="app-picker-search">
-                  <Search size={14}/>
+                  <Search size={14} />
                   <input
                     type="text"
                     placeholder="Search installed apps..."
                     value={appSearch}
-                    onChange={e=>setAppSearch(e.target.value)}
+                    onChange={(e) => setAppSearch(e.target.value)}
                   />
                 </div>
 
-                {appsLoading && allApps.length===0 ? (
+                {appsLoading && allApps.length === 0 ? (
                   <div className="app-picker-status">Loading apps...</div>
-                ) : filteredApps.length===0 ? (
+                ) : filteredApps.length === 0 ? (
                   <div className="app-picker-status">No apps found</div>
                 ) : (
                   <div className="app-picker-list">
-                    {filteredApps.map(app=>{
+                    {filteredApps.map((app) => {
                       const checked = selectedIds.has(app.id);
                       return (
                         <label className="app-picker-row" key={app.id}>
-                          <span className={checked?"app-checkbox checked":"app-checkbox"}>
-                            {checked && <Check size={12}/>}
+                          <span className={checked ? "app-checkbox checked" : "app-checkbox"}>
+                            {checked && <Check size={12} />}
                           </span>
                           <input
                             type="checkbox"
                             checked={checked}
-                            onChange={()=>toggleAppSelected(app.id)}
+                            onChange={() => toggleAppSelected(app.id)}
                           />
                           {app.icon ? (
-                            <img src={app.icon} width={20} height={20} loading="lazy"/>
+                            <img src={app.icon} width={20} height={20} loading="lazy" />
                           ) : (
-                            <span className="app-picker-icon-fallback"/>
+                            <span className="app-picker-icon-fallback" />
                           )}
                           <span className="app-picker-name">{app.name}</span>
                         </label>
@@ -329,51 +386,50 @@ export default function SettingsPanel({
 
                 <button
                   className="app-picker-add-btn"
-                  disabled={selectedIds.size===0 || adding}
+                  disabled={selectedIds.size === 0 || adding}
                   onClick={handleAddApps}
                 >
                   {adding
                     ? "Adding..."
                     : justAdded
-                    ? "Added ✓"
-                    : selectedIds.size>0
-                    ? `Add ${selectedIds.size} app${selectedIds.size>1?"s":""}`
-                    : "Add"}
+                      ? "Added ✓"
+                      : selectedIds.size > 0
+                        ? `Add ${selectedIds.size} app${selectedIds.size > 1 ? "s" : ""}`
+                        : "Add"}
                 </button>
-
               </div>
             )}
-
           </div>
 
+          {/* Add Launcher App */}
           <div className="sidebar-settings-box">
-
             <button
               className="sidebar-dropdown"
-              onClick={()=>setAddPagesOpen(!addPagesOpen)}
+              onClick={() => setAddPagesOpen(!addPagesOpen)}
             >
               <span>Add Launcher App</span>
-              <ChevronDown size={16} className={addPagesOpen?"rotate":""}/>
+              <ChevronDown size={16} className={addPagesOpen ? "rotate" : ""} />
             </button>
 
             {addPagesOpen && (
               <div className="sidebar-dropdown-content">
-
-                {availablePages.length===0 ? (
-                  <div className="app-picker-status">All launcher apps are already added.</div>
+                {availablePages.length === 0 ? (
+                  <div className="app-picker-status">
+                    All launcher apps are already added.
+                  </div>
                 ) : (
                   <div className="app-picker-list">
-                    {availablePages.map(entry=>{
+                    {availablePages.map((entry) => {
                       const checked = selectedPages.has(entry.page);
                       return (
                         <label className="app-picker-row" key={entry.page}>
-                          <span className={checked?"app-checkbox checked":"app-checkbox"}>
-                            {checked && <Check size={12}/>}
+                          <span className={checked ? "app-checkbox checked" : "app-checkbox"}>
+                            {checked && <Check size={12} />}
                           </span>
                           <input
                             type="checkbox"
                             checked={checked}
-                            onChange={()=>togglePageSelected(entry.page)}
+                            onChange={() => togglePageSelected(entry.page)}
                           />
                           <span className="app-picker-name">{entry.label}</span>
                         </label>
@@ -382,27 +438,76 @@ export default function SettingsPanel({
                   </div>
                 )}
 
-                {availablePages.length>0 && (
+                {availablePages.length > 0 && (
                   <button
                     className="app-picker-add-btn"
-                    disabled={selectedPages.size===0 || addingPages}
+                    disabled={selectedPages.size === 0 || addingPages}
                     onClick={handleAddPages}
                   >
                     {addingPages
                       ? "Adding..."
                       : pagesJustAdded
-                      ? "Added ✓"
-                      : selectedPages.size>0
-                      ? `Add ${selectedPages.size} app${selectedPages.size>1?"s":""}`
-                      : "Add"}
+                        ? "Added ✓"
+                        : selectedPages.size > 0
+                          ? `Add ${selectedPages.size} app${selectedPages.size > 1 ? "s" : ""}`
+                          : "Add"}
                   </button>
                 )}
-
               </div>
             )}
-
           </div>
 
+          {/* ===== Taskbar Settings ===== */}
+          <div className="sidebar-settings-box">
+            <button
+              className="sidebar-dropdown"
+              onClick={() => setTaskbarOpen(!taskbarOpen)}
+            >
+              <span>Taskbar Settings</span>
+              <ChevronDown size={16} className={taskbarOpen ? "rotate" : ""} />
+            </button>
+
+            {taskbarOpen && (
+              <div className="sidebar-dropdown-content">
+                {/* Position */}
+                <div className="settings-row">
+                  <div className="settings-label">
+                    <strong>Position</strong>
+                    <span>Where the taskbar sits on screen.</span>
+                  </div>
+
+                  <div className="settings-control lang-toggle-settings">
+                    {(["bottom", "top", "left", "right"] as TaskbarPosition[]).map(
+                      (pos) => (
+                        <button
+                          key={pos}
+                          className={taskbarPos === pos ? "lang-btn active" : "lang-btn"}
+                          onClick={() => handlePositionChange(pos)}
+                        >
+                          {pos.charAt(0).toUpperCase() + pos.slice(1)}
+                        </button>
+                      )
+                    )}
+                  </div>
+                </div>
+
+                {/* Auto-hide */}
+                <div className="settings-row">
+                  <div className="settings-label">
+                    <strong>Auto-hide</strong>
+                    <span>Hide taskbar until mouse reaches the edge.</span>
+                  </div>
+
+                  <button
+                    className={taskbarAutoHide ? "switch on" : "switch"}
+                    onClick={() => handleAutoHideChange(!taskbarAutoHide)}
+                  >
+                    <span className="switch-knob" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

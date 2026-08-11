@@ -1,4 +1,5 @@
-import { route, type RouteResult } from "../ai/router";
+import { orchestrate } from "../ai/orchestrator";
+import type { RouteResult } from "../ai/router";
 import type { ReplyLang } from "../llm/openrouter";
 
 export async function askVSmart(
@@ -6,6 +7,6 @@ export async function askVSmart(
   lang: ReplyLang = "en"
 ): Promise<RouteResult> {
 
-  return await route(input, lang);
+  return await orchestrate(input, lang);
 
 }
