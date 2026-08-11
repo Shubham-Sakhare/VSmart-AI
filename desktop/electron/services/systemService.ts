@@ -445,6 +445,15 @@ const appMap:Record<string,string>={
 chrome:"chrome",
 browser:"chrome",
 vscode:"code",
+"vs code":"code",
+"visual studio code":"code",
+"v s code":"code",
+"code editor":"code",
+cde:"code",
+// Common Vosk mishearings of "VS Code" observed in practice - narrow,
+// exact-word aliases so they don't accidentally swallow unrelated speech.
+"b s":"code",
+bs:"code",
 code:"code",
 calculator:"calc",
 calc:"calc",
@@ -478,6 +487,61 @@ google:"https://www.google.com/search?q="
 
 
 let lastSite:string|null=null;
+
+// Navigates the already-open YouTube tab (from openInSession's session
+// tracking) to a search results page - used for the "open youtube" ->
+// "what do you want to watch?" -> search follow-up flow.
+export async function searchOnYoutube(query:string):Promise<string>{
+try{
+await openInSession(
+"youtube",
+searchableSites.youtube+encodeURIComponent(query)
+);
+return "";
+}catch{
+return "";
+}
+}
+
+/* ================= Chrome profiles ================= */
+
+export interface ChromeProfile{
+name:string;
+directory:string;
+}
+
+function chromeLocalStatePath():string{
+return path.join(
+process.env.LOCALAPPDATA||path.join(app.getPath("home"),"AppData","Local"),
+"Google","Chrome","User Data","Local State"
+);
+}
+
+// Reads Chrome's own profile list (same data Chrome's profile picker uses),
+// so "open chrome" can offer a real choice when more than one profile
+// exists, instead of always opening whichever was used last.
+export function getChromeProfiles():ChromeProfile[]{
+try{
+const raw=fs.readFileSync(chromeLocalStatePath(),"utf-8");
+const data=JSON.parse(raw);
+const cache=data?.profile?.info_cache;
+
+if(!cache||typeof cache!=="object")return [];
+
+return Object.entries(cache).map(([dir,info]:[string,any])=>({
+name:info?.name||info?.shortcut_name||dir,
+directory:dir
+}));
+
+}catch{
+return [];
+}
+}
+
+export function openChromeProfile(directory:string):void{
+const safeDir=directory.replace(/"/g,"");
+exec(`start chrome --profile-directory="${safeDir}"`);
+}
 
 
 function runCommand(command:string):Promise<void>{
@@ -590,6 +654,18 @@ return "";
 }
 
 
+// Only attempt the blind "start <key>" fallback when the text plausibly
+// looks like a real app name (Windows can resolve any registered App Path
+// this way, even ones not in our appMap above). Short fragments like "b s"
+// are almost always a misheard/garbled bit of speech, not a real app name -
+// attempting them anyway is what causes Windows' own "cannot find" dialog
+// to pop up (that popup comes from Windows itself, not something our code
+// can suppress once triggered). Skipping it here avoids the popup entirely
+// and goes straight to a graceful search fallback instead.
+const looksLikeAppName = key.replace(/\s+/g, "").length >= 4;
+
+if (looksLikeAppName) {
+
 try{
 
 await runCommand(key);
@@ -612,6 +688,23 @@ return "";
 return "";
 
 }
+
+}
+
+}
+
+try{
+
+await openInSession(
+"google",
+`https://www.google.com/search?q=${encodeURIComponent(rawInput)}`
+);
+
+return "";
+
+}catch{
+
+return "";
 
 }
 

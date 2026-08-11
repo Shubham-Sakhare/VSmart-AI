@@ -4,6 +4,8 @@ import { chatAgent } from "../agents/chatAgent";
 import { systemAgent } from "../agents/systemAgent";
 import { codingAgent } from "../agents/codingAgent";
 import { visionAgent } from "../agents/visionAgent";
+import { fileSearchAgent } from "../agents/fileSearchAgent";
+import { desktopControlAgent } from "../agents/desktopControlAgent";
 import { speak } from "../app/voice/useVoice";
 import type { ReplyLang } from "../llm/openrouter";
 import type { Plan } from "./types";
@@ -146,6 +148,24 @@ function isBlocked(text: string): boolean {
 // Tracks a pending destructive action awaiting a yes/no confirmation.
 let pendingConfirm: "restart" | "shutdown" | null = null;
 
+// Tracks a pending multi-turn follow-up after certain "open X" commands —
+// e.g. "open chrome" -> "which profile?" -> next message picks one;
+// "open youtube" -> "what do you want to watch?" -> next message searches
+// the same tab; "open vs code" -> "what do you want me to do?" -> next
+// message is treated as a coding task.
+type PendingFollowUp =
+  | { type: "chrome_profile"; profiles: { name: string; directory: string }[] }
+  | { type: "youtube_search" }
+  | { type: "vscode_task" }
+  | null;
+
+let pendingFollowUp: PendingFollowUp = null;
+
+const VSCODE_TRIGGER_WORDS = [
+  "code", "vscode", "vs code", "visual studio code", "v s code",
+  "code editor", "cde", "b s", "bs"
+];
+
 export async function route(
   message: string,
   lang: ReplyLang = "en"
@@ -179,6 +199,56 @@ export async function route(
     return { success: true, action: "system.cancelled", message: msgs.cancelledUnclear };
   }
 
+  // ---- Handle a pending multi-turn follow-up next ----
+  if (pendingFollowUp) {
+    const followUp = pendingFollowUp;
+    pendingFollowUp = null;
+
+    if (followUp.type === "youtube_search") {
+      await window.vsmart.system.searchYoutube(message);
+      return {
+        success: true,
+        action: "youtube.search",
+        message: lang === "hi"
+          ? `ठीक है बॉस, "${message}" search कर दिया।`
+          : `Ok Boss, searched for "${message}".`
+      };
+    }
+
+    if (followUp.type === "vscode_task") {
+      const result = await codingAgent(message);
+      return { success: true, action: "coding.write", message: result };
+    }
+
+    if (followUp.type === "chrome_profile") {
+      const lower = message.toLowerCase();
+      const chosen = followUp.profiles.find(p => lower.includes(p.name.toLowerCase()));
+
+      if (chosen) {
+        await window.vsmart.system.openChromeProfile(chosen.directory);
+        return {
+          success: true,
+          action: "system.open",
+          message: lang === "hi"
+            ? `ओके बॉस, Chrome (${chosen.name}) खोल दिया।`
+            : `Ok Boss, opened Chrome (${chosen.name}).`
+        };
+      }
+
+      // Couldn't match a profile name — open the default profile rather
+      // than leaving the user stuck.
+      const result = await systemAgent("chrome");
+      return {
+        success: true,
+        action: "system.open",
+        message: [result, lang === "hi"
+          ? "Profile samajh nahi aaya, default Chrome khol diya."
+          : "Couldn't match that profile, opened the default Chrome instead."
+        ].filter(Boolean).join(" ")
+      };
+    }
+  }
+
   const plan: Plan = await planner(message);
   const { intent, command } = plan;
 
@@ -187,18 +257,31 @@ export async function route(
     case "memory": {
       const lower = command.toLowerCase();
 
-      if (lower.startsWith("recall") || lower.startsWith("show memory")) {
+      if (lower.startsWith("show memory") || lower.includes("what do you remember")) {
+        return {
+          success: true,
+          action: "memory.show",
+          message: await memoryAgent("show")
+        };
+      }
+
+      if (lower.startsWith("recall") || lower.startsWith("what is my") || lower.startsWith("what's my")) {
+        const key = lower
+          .replace(/^(recall|what is my|what's my)\s*/i, "")
+          .replace(/\?$/, "")
+          .trim();
+
         return {
           success: true,
           action: "memory.get",
-          message: await memoryAgent("get", { key: command })
+          message: await memoryAgent("get", { key })
         };
       }
 
       return {
         success: true,
         action: "memory.save",
-        message: await memoryAgent("save", { key: command, value: command })
+        message: await memoryAgent("save", { value: command })
       };
     }
 
@@ -213,6 +296,66 @@ export async function route(
       if (lower.includes("shutdown") || lower.includes("shut down")) {
         pendingConfirm = "shutdown";
         return { success: true, action: "system.confirm", message: msgs.shutdown };
+      }
+
+      const trimmedCommand = lower.trim();
+
+      // Chrome — if multiple profiles exist, ask which one before opening.
+      if (trimmedCommand === "chrome" || trimmedCommand === "browser") {
+        const profiles = await window.vsmart.system.getChromeProfiles();
+
+        if (profiles.length > 1) {
+          pendingFollowUp = { type: "chrome_profile", profiles };
+          const names = profiles.map(p => p.name).join(", ");
+          return {
+            success: true,
+            action: "system.askProfile",
+            message: lang === "hi"
+              ? `बॉस, कौन सी profile खोलूं? (${names})`
+              : `Which profile should I open, Boss? (${names})`
+          };
+        }
+        // 0 or 1 profile detected — fall through to the normal open below.
+      }
+
+      // YouTube — open it now, then ask what to search for (same tab).
+      if (trimmedCommand === "youtube" || trimmedCommand === "yt") {
+        speak(
+          lang === "hi" ? "ओके बॉस, YouTube खोल रहा हूँ..." : "Ok Boss, opening YouTube...",
+          lang === "hi" ? "hi-IN" : "en-IN"
+        );
+
+        const result = await systemAgent("youtube");
+        pendingFollowUp = { type: "youtube_search" };
+
+        return {
+          success: true,
+          action: "system.open",
+          message: [
+            result,
+            lang === "hi" ? "YouTube पे क्या देखना चाहते हो?" : "What do you want to watch on YouTube?"
+          ].filter(Boolean).join(" ")
+        };
+      }
+
+      // VS Code — open it now, then ask what to build.
+      if (VSCODE_TRIGGER_WORDS.includes(trimmedCommand)) {
+        speak(
+          lang === "hi" ? "ओके बॉस, VS Code खोल रहा हूँ..." : "Ok Boss, opening VS Code...",
+          lang === "hi" ? "hi-IN" : "en-IN"
+        );
+
+        const result = await systemAgent(command);
+        pendingFollowUp = { type: "vscode_task" };
+
+        return {
+          success: true,
+          action: "system.open",
+          message: [
+            result,
+            lang === "hi" ? "VS Code में क्या करना चाहते हो?" : "What do you want me to do in VS Code?"
+          ].filter(Boolean).join(" ")
+        };
       }
 
       const actionKey = classifyAction(message);
@@ -240,6 +383,31 @@ export async function route(
       return {
         success: true,
         action: "vision.analyze",
+        message: result
+      };
+    }
+
+    case "file": {
+      speak(
+        lang === "hi" ? "ओके बॉस, फ़ाइलें ढूंढ रहा हूँ..." : "Ok Boss, searching your files...",
+        lang === "hi" ? "hi-IN" : "en-IN"
+      );
+
+      const result = await fileSearchAgent(command, lang);
+
+      return {
+        success: true,
+        action: "file.search",
+        message: result
+      };
+    }
+
+    case "automation": {
+      const result = await desktopControlAgent(command, lang);
+
+      return {
+        success: true,
+        action: "automation.control",
         message: result
       };
     }

@@ -2,9 +2,18 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 const WAKE_WORD = "vsmart";
 const SAMPLE_RATE = 16000; // Vosk model expects 16kHz mono PCM16
-const SILENCE_TIMEOUT_MS = 6000; // auto-stop the mic if nothing is heard for this long
+const SILENCE_TIMEOUT_MS = 6000; // hard fallback: stop the mic if NOTHING is ever heard for this long
 const FINAL_DEBOUNCE_MS = 900; // wait this long after a "final" before treating it as complete
 const WAKE_RESTART_DELAY_MS = 500; // brief pause before auto-restarting in wake-word mode
+
+// Energy-based Voice Activity Detection (VAD): once real speech has been
+// detected in the raw mic signal, a short quiet period below this RMS
+// threshold ends the turn — a much snappier, more natural cutoff than
+// waiting on Vosk's own result timing or the long fallback timeout above.
+// (Simple energy-based VAD, not a neural model like Silero — lightweight
+// and works fully offline with zero extra dependencies.)
+const SPEECH_RMS_THRESHOLD = 0.015;
+const VAD_SILENCE_MS = 1100;
 
 /** "Good Morning", "Good Afternoon", "Good Evening", "Good Night" based on current hour. */
 function timeBasedGreeting(): string {
@@ -38,6 +47,7 @@ export function useVoice({ onCommand, lang = "en-IN", wakeWordEnabled = false }:
   const [interimText, setInterimText] = useState("");
   const [supported, setSupported] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [micLevel, setMicLevel] = useState(0); // 0..1 raw mic energy, for an optional waveform/level UI
 
   const onCommandRef = useRef(onCommand);
   onCommandRef.current = onCommand;
@@ -52,6 +62,11 @@ export function useVoice({ onCommand, lang = "en-IN", wakeWordEnabled = false }:
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const accumulatedRef = useRef("");
 
+  // VAD (voice activity detection) state.
+  const hasSpeechRef = useRef(false);
+  const vadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dispatchAccumulatedRef = useRef<() => void>(() => {});
+
   const stopCapture = useCallback(() => {
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current);
@@ -61,6 +76,11 @@ export function useVoice({ onCommand, lang = "en-IN", wakeWordEnabled = false }:
       clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = null;
     }
+    if (vadTimerRef.current) {
+      clearTimeout(vadTimerRef.current);
+      vadTimerRef.current = null;
+    }
+    hasSpeechRef.current = false;
     accumulatedRef.current = "";
     processorRef.current?.disconnect();
     processorRef.current = null;
@@ -70,6 +90,7 @@ export function useVoice({ onCommand, lang = "en-IN", wakeWordEnabled = false }:
     streamRef.current = null;
     setListening(false);
     setInterimText("");
+    setMicLevel(0);
   }, []);
 
   const resetSilenceTimer = useCallback(() => {
@@ -101,6 +122,8 @@ export function useVoice({ onCommand, lang = "en-IN", wakeWordEnabled = false }:
       setTimeout(() => startListeningRef.current(), WAKE_RESTART_DELAY_MS);
     }
   }, [lang, stopCapture]);
+
+  dispatchAccumulatedRef.current = dispatchAccumulated;
 
   const handleFinal = useCallback((text: string) => {
     const trimmed = text.trim();
@@ -179,12 +202,41 @@ export function useVoice({ onCommand, lang = "en-IN", wakeWordEnabled = false }:
         const float32 = e.inputBuffer.getChannelData(0);
         const int16 = new Int16Array(float32.length);
 
+        let sumSq = 0;
         for (let i = 0; i < float32.length; i++) {
           const s = Math.max(-1, Math.min(1, float32[i]));
           int16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+          sumSq += s * s;
         }
 
+        // Vosk needs a continuous, unbroken audio stream to recognize
+        // reliably - gating/pausing this stream confuses it, so every
+        // chunk is always sent through.
         window.vsmart.voice.sendAudioChunk(int16.buffer);
+
+        // --- energy-based VAD (auto-stop-on-silence only, no gating) ---
+        const rms = Math.sqrt(sumSq / float32.length);
+        setMicLevel(Math.min(1, rms * 8));
+
+        if (rms > SPEECH_RMS_THRESHOLD) {
+          hasSpeechRef.current = true;
+          if (vadTimerRef.current) {
+            clearTimeout(vadTimerRef.current);
+            vadTimerRef.current = null;
+          }
+        } else if (hasSpeechRef.current && !vadTimerRef.current) {
+          // Genuine quiet period after real speech was heard - wrap up
+          // the turn now rather than waiting on Vosk's own final-result
+          // timing.
+          vadTimerRef.current = setTimeout(() => {
+            vadTimerRef.current = null;
+            if (debounceTimerRef.current) {
+              clearTimeout(debounceTimerRef.current);
+              debounceTimerRef.current = null;
+            }
+            dispatchAccumulatedRef.current();
+          }, VAD_SILENCE_MS);
+        }
       };
 
       // ScriptProcessorNode needs to be connected to something to keep firing
@@ -236,6 +288,7 @@ export function useVoice({ onCommand, lang = "en-IN", wakeWordEnabled = false }:
     interimText,
     supported,
     errorMsg,
+    micLevel,
     startListening,
     stopListening,
     toggleListening

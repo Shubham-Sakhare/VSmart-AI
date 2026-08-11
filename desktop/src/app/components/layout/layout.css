@@ -3,14 +3,33 @@
     flex-direction:column;
     width:100vw;
     height:100vh;
+    box-sizing:border-box;
     overflow:hidden;
     background:#050816;
+    padding:0;
+    transition:padding .25s ease;
+}
+
+/* Taskbar jis side pe hai, layout usi side se utni jagah chhod de
+   (--taskbar-size TaskBar.tsx se set hota hai, actual measured size) */
+body[data-taskbar-pos="bottom"] .app-shell{
+    padding-bottom:var(--taskbar-size,0px);
+}
+body[data-taskbar-pos="top"] .app-shell{
+    padding-top:var(--taskbar-size,0px);
+}
+body[data-taskbar-pos="left"] .app-shell{
+    padding-left:var(--taskbar-size,0px);
+}
+body[data-taskbar-pos="right"] .app-shell{
+    padding-right:var(--taskbar-size,0px);
 }
 
 .layout-row{
     flex:1;
     display:flex;
     overflow:hidden;
+    min-height:0;
 }
 
 .main-content{
@@ -19,56 +38,83 @@
     flex-direction:column;
     overflow:hidden;
     position:relative;
+    min-width:0;
     background:
-        radial-gradient(circle at 15% 0%,rgba(168,85,247,.14) 0%,transparent 40%),
-        radial-gradient(circle at 85% 15%,rgba(0,229,255,.14) 0%,transparent 40%),
-        radial-gradient(circle at top,#10254b 0%,#07111f 45%,#040812 100%);
+        radial-gradient(circle at 15% 0%, rgba(168,85,247,.14) 0%, transparent 40%),
+        radial-gradient(circle at 85% 15%, rgba(0,229,255,.14) 0%, transparent 40%),
+        radial-gradient(circle at top, #10254b 0%, #07111f 45%, #040812 100%);
 }
 
 .coming-soon{
-    color:white;
-    opacity:.6;
-    padding:60px;
-    text-align:center;
-    font-size:16px;
-}
-
-.chat-launcher{
-
-    position:fixed;
-    bottom:150px;
-    right:24px;
-
-    width:56px;
-    height:56px;
-    border-radius:50%;
-
     display:flex;
     align-items:center;
     justify-content:center;
-
-    background:linear-gradient(135deg,#00c8ff,#00ffd5);
-    border:none;
-    color:#04141c;
-    cursor:pointer;
-
-    box-shadow:0 6px 24px rgba(0,229,255,.4);
-    z-index:150;
-
-    transition:.25s;
-
+    height:100%;
+    color:#8fb8cc;
+    opacity:.7;
+    padding:60px;
+    text-align:center;
+    font-size:16px;
+    letter-spacing:.3px;
 }
+
+/* ========== Chat Launcher ========== */
+.chat-launcher{
+  position:fixed;
+  bottom: calc(var(--bottombar-size, 78px) + 20px);
+  right:24px;
+  width:52px;
+  height:52px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:linear-gradient(135deg,#00c8ff,#00ffd5);
+  border:none;
+  color:#04141c;
+  cursor:pointer;
+  box-shadow:
+    0 6px 24px rgba(0,229,255,.4),
+    0 0 0 1px rgba(255,255,255,.08) inset;
+  z-index:150;
+  transition:transform .25s ease, box-shadow .25s ease, bottom .25s ease, right .25s ease;
+}
+
+/* Taskbar bottom pe ho to uski height bhi add karo taaki overlap na ho */
+body[data-taskbar-pos="bottom"] .chat-launcher{
+  bottom: calc(var(--taskbar-size, 60px) + var(--bottombar-size, 78px) + 20px);
+}
+
+/* Taskbar RIGHT pe ho to launcher ko uske left shift karo */
+body[data-taskbar-pos="right"] .chat-launcher{
+  right: calc(24px + var(--taskbar-size, 64px));
+}
+
+/* Taskbar LEFT pe koi change nahi chahiye, right hi rahega */
+body[data-taskbar-pos="left"] .chat-launcher{
+  right:24px;
+}
+
+/* Taskbar TOP ho to bottombar hi neeche hai, uski height se position hoga (default rule already sahi hai) */
 
 .chat-launcher:hover{
     transform:scale(1.08);
-    box-shadow:0 6px 30px rgba(0,229,255,.6);
+    box-shadow:
+      0 6px 30px rgba(0,229,255,.6),
+      0 0 0 1px rgba(255,255,255,.12) inset;
 }
 
+.chat-launcher:active{
+    transform:scale(1.02);
+}
+
+/* ========== Page Content ========== */
 .page-content{
     flex:1;
     min-height:0;
     overflow-y:auto;
     padding:25px;
+    scroll-behavior:smooth;
 }
 
 .page-content::-webkit-scrollbar{
@@ -78,6 +124,10 @@
 .page-content::-webkit-scrollbar-thumb{
     background:#00d9ff55;
     border-radius:20px;
+}
+
+.page-content::-webkit-scrollbar-thumb:hover{
+    background:#00d9ff88;
 }
 
 .page-content::-webkit-scrollbar-track{

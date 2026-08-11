@@ -1,5 +1,4 @@
 ﻿import "./bottombar.css";
-import { PlayCircle } from "lucide-react";
 import type { VoiceControls } from "../../voice/useVoice";
 
 interface BottomBarProps {
@@ -7,7 +6,6 @@ interface BottomBarProps {
 }
 
 export default function BottomBar({ voice }: BottomBarProps) {
-
   const statusLabel = voice.listening
     ? "I am listening..."
     : voice.wakeActive
@@ -16,7 +14,6 @@ export default function BottomBar({ voice }: BottomBarProps) {
 
   return (
     <footer className="bottombar">
-
       <button
         className={voice.listening ? "talk-btn active" : "talk-btn"}
         onClick={voice.toggleListening}
@@ -34,12 +31,6 @@ export default function BottomBar({ voice }: BottomBarProps) {
           <i></i><i></i><i></i><i></i><i></i>
         </span>
       </button>
-
-      <button className="briefing-btn">
-        <PlayCircle size={16} />
-        Executive Briefing
-      </button>
-
     </footer>
   );
 }

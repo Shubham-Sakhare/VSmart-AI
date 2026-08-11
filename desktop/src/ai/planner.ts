@@ -23,7 +23,15 @@ export async function planner(text: string): Promise<Plan> {
       break;
 
     case "file":
-      command = extractTarget(text);
+      // Keep the full sentence — the file-search service does its own
+      // natural-language parsing (file type, date range, keywords).
+      command = text.trim();
+      break;
+
+    case "automation":
+      // Keep the full sentence — the desktop-control agent parses out
+      // coordinates / typed text / key combos itself.
+      command = text.trim();
       break;
 
     case "coding":

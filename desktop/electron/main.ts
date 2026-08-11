@@ -10,6 +10,9 @@ import{registerSystemControlIPC}from"./ipc/systemControl.js";
 import{registerMarketIPC}from"./ipc/market.js";
 import{registerLauncherIPC}from"./ipc/launcher.js";
 import{registerVisionIPC}from"./ipc/vision.js";
+import{registerFileSearchIPC}from"./ipc/fileSearch.js";
+import{registerDesktopControlIPC}from"./ipc/desktopControl.js";
+import{registerProjectIPC}from"./ipc/project.js";
 import{initVosk}from"./services/voskService.js";
 
 let mainWindow:BrowserWindow|null=null;
@@ -26,6 +29,23 @@ callback(false);
 }
 );
 
+// Content-Security-Policy - silences Electron's "Insecure CSP" dev warning
+// and is genuinely tighter security for the packaged app. Dev mode needs a
+// slightly looser policy (Vite's dev server + HMR websocket); production
+// gets a strict one with no remote script/style sources at all.
+const csp=app.isPackaged
+?"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://openrouter.ai; media-src 'self'; object-src 'none'; base-uri 'self';"
+:"default-src 'self' http://localhost:5173 ws://localhost:5173; script-src 'self' http://localhost:5173 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline' http://localhost:5173; img-src 'self' data: http://localhost:5173; font-src 'self' data:; connect-src 'self' http://localhost:5173 ws://localhost:5173 https://openrouter.ai; media-src 'self'; object-src 'none';";
+
+session.defaultSession.webRequest.onHeadersReceived((details,callback)=>{
+callback({
+responseHeaders:{
+...details.responseHeaders,
+"Content-Security-Policy":[csp]
+}
+});
+});
+
 initVosk();
 registerVoiceIPC();
 
@@ -38,6 +58,9 @@ registerSystemControlIPC();
 registerMarketIPC();
 registerLauncherIPC();
 registerVisionIPC();
+registerFileSearchIPC();
+registerDesktopControlIPC();
+registerProjectIPC();
 
 ipcMain.handle(
 "open-system",
@@ -48,8 +71,8 @@ return await openApplication(appName);
 
 ipcMain.handle(
 "write-code",
-async(_,code:string,language?:string)=>{
-return await writeAndOpenCode(code,language);
+async(_,code:string,language?:string,filename?:string)=>{
+return await writeAndOpenCode(code,language,filename);
 }
 );
 
