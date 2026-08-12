@@ -1,107 +1,149 @@
 import Database from "better-sqlite3";
 import path from "path";
+import fs from "fs";
+import { app } from "electron";
 
+/**
+ * ============================================================
+ * VSmart AI - SQLite Database
+ * ============================================================
+ *
+ * Development:
+ *   Database -> project working directory
+ *
+ * Production / Installed App:
+ *   Database -> Electron userData directory
+ *
+ * This prevents SQLite from trying to write inside:
+ *   C:\Program Files\VSmart AI\
+ *
+ * which causes:
+ *   SqliteError: unable to open database file
+ * ============================================================
+ */
+
+// ------------------------------------------------------------
+// Database directory
+// ------------------------------------------------------------
+
+const dataDir = app.isPackaged
+  ? app.getPath("userData")
+  : process.cwd();
+
+// Make sure the directory exists
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, {
+    recursive: true,
+  });
+}
+
+// ------------------------------------------------------------
+// Database file
+// ------------------------------------------------------------
 
 const dbPath = path.join(
-  process.cwd(),
+  dataDir,
   "vsmart-memory.db"
 );
 
+console.log(
+  "[VSmart AI] SQLite database path:",
+  dbPath
+);
+
+// ------------------------------------------------------------
+// Open database
+// ------------------------------------------------------------
 
 const db = new Database(dbPath);
 
+// Optional SQLite performance/safety settings
+db.pragma("journal_mode = WAL");
+db.pragma("foreign_keys = ON");
 
-// Create memory table
+// ============================================================
+// MEMORY TABLE
+// ============================================================
 
 db.prepare(`
-CREATE TABLE IF NOT EXISTS memories (
-
+  CREATE TABLE IF NOT EXISTS memories (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-
     key TEXT UNIQUE,
-
     value TEXT,
-
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-
-)
+  )
 `).run();
 
-// Separate table for genuine "facts about the user" (long-term AI memory),
-// kept apart from `memories` above (which is a generic app-settings KV
-// store used by the UI - sidebar prefs, launcher state, conversations,
-// etc.). Keeping facts separate means semantic search only ever runs over
-// real user facts, not JSON blobs of app state.
+// ============================================================
+// LONG-TERM MEMORY FACTS TABLE
+// ============================================================
+
 db.prepare(`
-CREATE TABLE IF NOT EXISTS memory_facts (
-
+  CREATE TABLE IF NOT EXISTS memory_facts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-
     fact_key TEXT UNIQUE,
-
     fact_value TEXT,
-
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-
-)
+  )
 `).run();
 
-
+// ============================================================
+// BASIC MEMORY FUNCTIONS
+// ============================================================
 
 export function saveMemory(
-    key:string,
-    value:string
-){
+  key: string,
+  value: string
+): void {
+  const stmt = db.prepare(`
+    INSERT INTO memories (
+      key,
+      value
+    )
+    VALUES (?, ?)
+    ON CONFLICT(key)
+    DO UPDATE SET
+      value = excluded.value
+  `);
 
-    const stmt = db.prepare(`
-        INSERT INTO memories(key,value)
-        VALUES(?,?)
-        ON CONFLICT(key)
-        DO UPDATE SET value=excluded.value
-    `);
-
-
-    stmt.run(
-        key,
-        value
-    );
-
+  stmt.run(
+    key,
+    value
+  );
 }
 
-
+// ------------------------------------------------------------
 
 export function getMemory(
-    key:string
-){
+  key: string
+): string | null {
+  const stmt = db.prepare(`
+    SELECT value
+    FROM memories
+    WHERE key = ?
+  `);
 
-    const stmt = db.prepare(`
-        SELECT value 
-        FROM memories
-        WHERE key=?
-    `);
+  const result = stmt.get(key) as
+    | { value: string }
+    | undefined;
 
-
-    const result = stmt.get(key) as
-    {value:string} | undefined;
-
-
-    return result?.value || null;
-
+  return result?.value ?? null;
 }
 
+// ------------------------------------------------------------
 
-
-export function getAllMemory(){
-
-    return db.prepare(`
-        SELECT * FROM memories
-    `).all();
-
+export function getAllMemory() {
+  return db.prepare(`
+    SELECT *
+    FROM memories
+    ORDER BY created_at DESC
+  `).all();
 }
 
-/* ================= long-term "facts about the user" memory ================= */
+// ============================================================
+// LONG-TERM "FACTS ABOUT USER"
+// ============================================================
 
 export interface MemoryFact {
   key: string;
@@ -110,55 +152,118 @@ export interface MemoryFact {
   updated_at: string;
 }
 
-export function saveFact(key: string, value: string): void {
-  const normalizedKey = key.trim().toLowerCase();
+// ------------------------------------------------------------
+
+export function saveFact(
+  key: string,
+  value: string
+): void {
+  const normalizedKey = key
+    .trim()
+    .toLowerCase();
+
+  if (!normalizedKey) {
+    return;
+  }
 
   db.prepare(`
-    INSERT INTO memory_facts(fact_key, fact_value)
-    VALUES(?, ?)
+    INSERT INTO memory_facts (
+      fact_key,
+      fact_value
+    )
+    VALUES (?, ?)
+
     ON CONFLICT(fact_key)
-    DO UPDATE SET fact_value = excluded.fact_value, updated_at = CURRENT_TIMESTAMP
-  `).run(normalizedKey, value);
+    DO UPDATE SET
+      fact_value = excluded.fact_value,
+      updated_at = CURRENT_TIMESTAMP
+  `).run(
+    normalizedKey,
+    value
+  );
 }
 
-export function getFact(key: string): string | null {
-  const normalizedKey = key.trim().toLowerCase();
+// ------------------------------------------------------------
+
+export function getFact(
+  key: string
+): string | null {
+  const normalizedKey = key
+    .trim()
+    .toLowerCase();
+
+  if (!normalizedKey) {
+    return null;
+  }
 
   const result = db.prepare(`
-    SELECT fact_value FROM memory_facts WHERE fact_key = ?
-  `).get(normalizedKey) as { fact_value: string } | undefined;
+    SELECT fact_value
+    FROM memory_facts
+    WHERE fact_key = ?
+  `).get(normalizedKey) as
+    | { fact_value: string }
+    | undefined;
 
   return result?.fact_value ?? null;
 }
 
+// ------------------------------------------------------------
+
 export function getAllFacts(): MemoryFact[] {
   return db.prepare(`
-    SELECT fact_key as key, fact_value as value, created_at, updated_at
+    SELECT
+      fact_key AS key,
+      fact_value AS value,
+      created_at,
+      updated_at
     FROM memory_facts
     ORDER BY updated_at DESC
   `).all() as MemoryFact[];
 }
 
-export function deleteFact(key: string): boolean {
-  const normalizedKey = key.trim().toLowerCase();
-  const result = db.prepare(`DELETE FROM memory_facts WHERE fact_key = ?`).run(normalizedKey);
+// ------------------------------------------------------------
+
+export function deleteFact(
+  key: string
+): boolean {
+  const normalizedKey = key
+    .trim()
+    .toLowerCase();
+
+  if (!normalizedKey) {
+    return false;
+  }
+
+  const result = db.prepare(`
+    DELETE FROM memory_facts
+    WHERE fact_key = ?
+  `).run(normalizedKey);
+
   return result.changes > 0;
 }
 
-/* ---------- lightweight TF-IDF vector search (offline, zero dependencies) ---------- */
-// Not a neural embedding model (no Silero/OpenAI-style embeddings) — this
-// builds classic TF-IDF vectors over the stored facts and ranks them by
-// cosine similarity to the query. Genuinely a vector search, just a
-// lexical one rather than a semantic/neural one. Good enough for a
-// personal fact store of a few hundred entries, entirely offline.
+// ============================================================
+// TF-IDF TOKENIZER
+// ============================================================
 
-function tokenize(text: string): string[] {
+function tokenize(
+  text: string
+): string[] {
   return text
     .toLowerCase()
-    .replace(/[^a-z0-9\u0900-\u097F\s]/g, " ")
+    .replace(
+      /[^a-z0-9\u0900-\u097F\s]/g,
+      " "
+    )
     .split(/\s+/)
-    .filter(w => w.length > 1);
+    .filter(
+      (word) => word.length > 1
+    );
 }
+
+// ============================================================
+// FACT SEARCH RESULT
+// ============================================================
 
 export interface FactMatch {
   key: string;
@@ -166,60 +271,222 @@ export interface FactMatch {
   score: number;
 }
 
-export function searchFacts(query: string, topK = 5, minScore = 0.05): FactMatch[] {
+// ============================================================
+// TF-IDF SEARCH
+// ============================================================
 
+export function searchFacts(
+  query: string,
+  topK = 5,
+  minScore = 0.05
+): FactMatch[] {
   const facts = getAllFacts();
-  if (facts.length === 0) return [];
 
-  const docs = facts.map(f => tokenize(`${f.key} ${f.value}`));
+  if (facts.length === 0) {
+    return [];
+  }
+
+  // ----------------------------------------------------------
+  // Create documents
+  // ----------------------------------------------------------
+
+  const docs = facts.map(
+    (fact) =>
+      tokenize(
+        `${fact.key} ${fact.value}`
+      )
+  );
+
+  // ----------------------------------------------------------
+  // Tokenize query
+  // ----------------------------------------------------------
+
   const queryTokens = tokenize(query);
-  if (queryTokens.length === 0) return [];
+
+  if (queryTokens.length === 0) {
+    return [];
+  }
 
   const N = docs.length;
 
-  // document frequency per term
-  const df = new Map<string, number>();
+  // ----------------------------------------------------------
+  // Document frequency
+  // ----------------------------------------------------------
+
+  const df = new Map<
+    string,
+    number
+  >();
+
   for (const doc of docs) {
     const seen = new Set(doc);
+
     for (const term of seen) {
-      df.set(term, (df.get(term) ?? 0) + 1);
+      df.set(
+        term,
+        (df.get(term) ?? 0) + 1
+      );
     }
   }
 
-  const idf = (term: string) => Math.log((N + 1) / ((df.get(term) ?? 0) + 1)) + 1;
+  // ----------------------------------------------------------
+  // Inverse document frequency
+  // ----------------------------------------------------------
 
-  function tfVector(tokens: string[]): Map<string, number> {
-    const tf = new Map<string, number>();
-    for (const t of tokens) tf.set(t, (tf.get(t) ?? 0) + 1);
-    const vec = new Map<string, number>();
-    for (const [term, count] of tf) {
-      vec.set(term, (count / tokens.length) * idf(term));
+  const idf = (
+    term: string
+  ): number => {
+    return (
+      Math.log(
+        (N + 1) /
+        ((df.get(term) ?? 0) + 1)
+      ) + 1
+    );
+  };
+
+  // ----------------------------------------------------------
+  // TF-IDF vector
+  // ----------------------------------------------------------
+
+  function tfVector(
+    tokens: string[]
+  ): Map<string, number> {
+    const tf = new Map<
+      string,
+      number
+    >();
+
+    for (const token of tokens) {
+      tf.set(
+        token,
+        (tf.get(token) ?? 0) + 1
+      );
     }
+
+    const vec = new Map<
+      string,
+      number
+    >();
+
+    if (tokens.length === 0) {
+      return vec;
+    }
+
+    for (
+      const [term, count]
+      of tf
+    ) {
+      vec.set(
+        term,
+        (count / tokens.length) *
+          idf(term)
+      );
+    }
+
     return vec;
   }
 
-  function cosineSim(a: Map<string, number>, b: Map<string, number>): number {
-    let dot = 0, normA = 0, normB = 0;
-    for (const v of a.values()) normA += v * v;
-    for (const v of b.values()) normB += v * v;
-    for (const [term, va] of a) {
-      const vb = b.get(term);
-      if (vb) dot += va * vb;
+  // ----------------------------------------------------------
+  // Cosine similarity
+  // ----------------------------------------------------------
+
+  function cosineSim(
+    a: Map<string, number>,
+    b: Map<string, number>
+  ): number {
+    let dot = 0;
+    let normA = 0;
+    let normB = 0;
+
+    // Norm A
+    for (const value of a.values()) {
+      normA += value * value;
     }
-    if (normA === 0 || normB === 0) return 0;
-    return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+
+    // Norm B
+    for (const value of b.values()) {
+      normB += value * value;
+    }
+
+    // Dot product
+    for (
+      const [term, valueA]
+      of a
+    ) {
+      const valueB = b.get(term);
+
+      if (valueB !== undefined) {
+        dot += valueA * valueB;
+      }
+    }
+
+    if (
+      normA === 0 ||
+      normB === 0
+    ) {
+      return 0;
+    }
+
+    return (
+      dot /
+      (
+        Math.sqrt(normA) *
+        Math.sqrt(normB)
+      )
+    );
   }
 
-  const queryVec = tfVector(queryTokens);
+  // ----------------------------------------------------------
+  // Query vector
+  // ----------------------------------------------------------
 
-  const scored = facts.map((f, i) => ({
-    key: f.key,
-    value: f.value,
-    score: cosineSim(queryVec, tfVector(docs[i]))
-  }));
+  const queryVec =
+    tfVector(queryTokens);
+
+  // ----------------------------------------------------------
+  // Score documents
+  // ----------------------------------------------------------
+
+  const scored = facts.map(
+    (fact, index) => {
+      const factVec =
+        tfVector(
+          docs[index]
+        );
+
+      return {
+        key: fact.key,
+        value: fact.value,
+        score: cosineSim(
+          queryVec,
+          factVec
+        ),
+      };
+    }
+  );
+
+  // ----------------------------------------------------------
+  // Filter + sort + limit
+  // ----------------------------------------------------------
 
   return scored
-    .filter(s => s.score >= minScore)
-    .sort((a, b) => b.score - a.score)
+    .filter(
+      (item) =>
+        item.score >= minScore
+    )
+    .sort(
+      (a, b) =>
+        b.score - a.score
+    )
     .slice(0, topK);
+}
+
+// ============================================================
+// DATABASE CLOSE
+// ============================================================
+
+export function closeDatabase(): void {
+  if (db.open) {
+    db.close();
+  }
 }

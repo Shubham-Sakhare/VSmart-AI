@@ -15,6 +15,8 @@ import{registerFileSearchIPC}from"./ipc/fileSearch.js";
 import{registerDesktopControlIPC}from"./ipc/desktopControl.js";
 import{registerProjectIPC}from"./ipc/project.js";
 import{initVosk}from"./services/voskService.js";
+import{promptLaunchPreferenceIfNeeded}from"./services/launchPreference.js";
+import{registerLaunchPrefIPC}from"./ipc/launchPref.js";
 
 let mainWindow:BrowserWindow|null=null;
 
@@ -54,7 +56,9 @@ responseHeaders:{
 // features simply become active a moment later - no behavior is removed.
 registerVoiceIPC();
 registerApiKeyIPC();
+registerLaunchPrefIPC();
 mainWindow=createMainWindow();
+promptLaunchPreferenceIfNeeded(mainWindow);
 
 setImmediate(()=>{
 initVosk();
