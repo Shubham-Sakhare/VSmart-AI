@@ -179,6 +179,13 @@ onPartialResult:(callback:(text:string)=>void)=>void;
 onFinalResult:(callback:(text:string)=>void)=>void;
 };
 
+apiKey:{
+save:(key:string)=>Promise<boolean>;
+get:()=>Promise<string|null>;
+has:()=>Promise<boolean>;
+clear:()=>Promise<boolean>;
+};
+
 };
 }
 }

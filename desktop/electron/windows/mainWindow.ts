@@ -5,15 +5,14 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export function createMainWindow(): BrowserWindow {
 
+export function createMainWindow(): BrowserWindow {
   const mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     frame: false,
     backgroundColor: "#050510",
     title: "VSmart AI",
-
     webPreferences: {
       preload: path.join(__dirname, "../preload.js"),
       contextIsolation: true,
@@ -21,16 +20,39 @@ export function createMainWindow(): BrowserWindow {
     },
   });
 
-  if (!app.isPackaged) {
-    mainWindow.loadURL("http://localhost:5173");
-    mainWindow.webContents.openDevTools(); // Dev me helpful
-  } else {
-    mainWindow.loadFile(path.join(__dirname, "../../dist/index.html"));
-  }
+  mainWindow.loadFile(path.join(__dirname, "../../dist/index.html"));
 
   mainWindow.on("closed", () => {
     console.log("Main window closed.");
   });
-
   return mainWindow;
 }
+// export function createMainWindow(): BrowserWindow {
+
+//   const mainWindow = new BrowserWindow({
+//     width: 1200,
+//     height: 800,
+//     frame: false,
+//     backgroundColor: "#050510",
+//     title: "VSmart AI",
+
+//     webPreferences: {
+//       preload: path.join(__dirname, "../preload.js"),
+//       contextIsolation: true,
+//       nodeIntegration: false,
+//     },
+//   });
+
+//   if (!app.isPackaged) {
+//     mainWindow.loadURL("http://localhost:5173");
+//     mainWindow.webContents.openDevTools(); // Dev me helpful
+//   } else {
+//     mainWindow.loadFile(path.join(__dirname, "../../dist/index.html"));
+//   }
+
+//   mainWindow.on("closed", () => {
+//     console.log("Main window closed.");
+//   });
+
+//   return mainWindow;
+// }

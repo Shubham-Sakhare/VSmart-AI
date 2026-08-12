@@ -221,6 +221,22 @@ ipcRenderer.on(
 
 }
 
+},
+
+apiKey:{
+
+save:(key:string)=>
+ipcRenderer.invoke("apikey:save",key),
+
+get:()=>
+ipcRenderer.invoke("apikey:get"),
+
+has:()=>
+ipcRenderer.invoke("apikey:has"),
+
+clear:()=>
+ipcRenderer.invoke("apikey:clear")
+
 }
 
 });
