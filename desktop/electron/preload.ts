@@ -237,6 +237,16 @@ ipcRenderer.invoke("apikey:has"),
 clear:()=>
 ipcRenderer.invoke("apikey:clear")
 
+},
+
+launchPref:{
+
+get:()=>
+ipcRenderer.invoke("launchpref:get"),
+
+set:(enabled:boolean)=>
+ipcRenderer.invoke("launchpref:set",enabled)
+
 }
 
 });

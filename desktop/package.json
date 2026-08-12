@@ -2,8 +2,11 @@
   "name": "vsmart-ai",
   "private": true,
   "version": "1.0.0",
+  "description": "VSmart AI - AI Desktop Assistant",
+  "author": "Shubham Sakhare",
   "type": "module",
   "main": "dist-electron/main.js",
+
   "scripts": {
     "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron dist-electron/main.js\"",
     "build": "tsc -p tsconfig.app.json && vite build && tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.json",
@@ -11,8 +14,9 @@
     "electron:build": "tsc -p tsconfig.electron.json",
     "lint": "eslint .",
     "dist": "npm run build && electron-builder",
-    "postinstall": "electron-rebuild -f -w better-sqlite3"
+    "postinstall": "electron-builder install-app-deps"
   },
+
   "dependencies": {
     "@fontsource/inter": "^5.2.8",
     "@fontsource/orbitron": "^5.2.8",
@@ -32,6 +36,7 @@
     "vosk-koffi": "^1.1.1",
     "zustand": "^5.0.14"
   },
+
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/better-sqlite3": "^7.6.13",
@@ -53,10 +58,14 @@
     "vite": "^8.1.1",
     "wait-on": "^9.0.10"
   },
-  "build": {
+
+    "build": {
     "appId": "com.vsmart.ai",
     "productName": "VSmart AI",
     "asar": false,
+    "directories": {
+      "output": "release"
+    },
     "files": [
       "dist/**/*",
       "dist-electron/**/*"
@@ -72,6 +81,7 @@
     },
     "nsis": {
       "oneClick": false,
+      "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
