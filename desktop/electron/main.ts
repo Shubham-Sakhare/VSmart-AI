@@ -1,3 +1,4 @@
+import{registerApiKeyIPC}from"./ipc/apiKey.js";
 import{app,BrowserWindow,ipcMain,session,globalShortcut}from"electron";
 import{createMainWindow}from"./windows/mainWindow.js";
 import{registerWindowIPC}from"./ipc/window.js";
@@ -46,10 +47,18 @@ responseHeaders:{
 });
 });
 
-initVosk();
+// Voice IPC handlers are registered immediately so the renderer can talk to
+// them right away, but the actual Vosk model (45MB) loads AFTER the window
+// is created and shown, via setImmediate. This means the window appears
+// instantly instead of waiting 2-4s for the model to load first. Voice
+// features simply become active a moment later - no behavior is removed.
 registerVoiceIPC();
-
+registerApiKeyIPC();
 mainWindow=createMainWindow();
+
+setImmediate(()=>{
+initVosk();
+});
 
 registerWindowIPC(()=>mainWindow);
 registerMemoryIPC();

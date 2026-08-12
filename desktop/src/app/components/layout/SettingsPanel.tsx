@@ -3,6 +3,7 @@ import { X, Settings as SettingsIcon, ChevronDown, Search, Check } from "lucide-
 import { setPreferredVoice, getPreferredVoice } from "../../voice/useVoice";
 import type { ReplyLang } from "../../../llm/openrouter";
 import type { Page } from "./MainLayout";
+import { invalidateApiKeyCache } from "../../../llm/openrouter";
 import {
   LAUNCHER_CATALOG,
   LAUNCHER_APPS_KEY,
@@ -74,6 +75,13 @@ export default function SettingsPanel({
   const [taskbarPos, setTaskbarPos] = useState<TaskbarPosition>("bottom");
   const [taskbarAutoHide, setTaskbarAutoHide] = useState(false);
 
+  // API Key settings
+  const [apiKeyOpen, setApiKeyOpen] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState("");
+  const [hasKey, setHasKey] = useState(false);
+  const [keySaved, setKeySaved] = useState(false);
+  const [savingKey, setSavingKey] = useState(false);
+
   useEffect(() => {
     if (!open || !("speechSynthesis" in window)) return;
     const loadVoices = () => setVoices(window.speechSynthesis.getVoices());
@@ -116,6 +124,15 @@ export default function SettingsPanel({
       .getMemory("vsmart_taskbar_autohide")
       .then((raw) => setTaskbarAutoHide(raw === "1" || raw === "true"))
       .catch(() => {});
+  }, [open]);
+
+  // Load API key status when panel opens
+  useEffect(() => {
+    if (!open) return;
+    window.vsmart.apiKey
+      .has()
+      .then(setHasKey)
+      .catch(() => setHasKey(false));
   }, [open]);
 
   if (!open) return null;
@@ -211,6 +228,26 @@ const handleAutoHideChange = (enabled: boolean) => {
   );
 };
 
+const handleSaveApiKey = async () => {
+  if (!apiKeyInput.trim()) return;
+  setSavingKey(true);
+  try {
+    await window.vsmart.apiKey.save(apiKeyInput.trim());
+    setHasKey(true);
+    setApiKeyInput("");
+    setKeySaved(true);
+    setTimeout(() => setKeySaved(false), 2000);
+  } finally {
+    setSavingKey(false);
+  }
+};
+invalidateApiKeyCache();
+
+const handleClearApiKey = async () => {
+  await window.vsmart.apiKey.clear();
+  setHasKey(false);
+};
+invalidateApiKeyCache();
   return (
     <div className="settings-overlay" onClick={onClose}>
       <div className="settings-panel" onClick={(e) => e.stopPropagation()}>
@@ -505,6 +542,59 @@ const handleAutoHideChange = (enabled: boolean) => {
                     <span className="switch-knob" />
                   </button>
                 </div>
+              </div>
+            )}
+          </div>
+
+          {/* ===== API Key Settings ===== */}
+          <div className="sidebar-settings-box">
+            <button
+              className="sidebar-dropdown"
+              onClick={() => setApiKeyOpen(!apiKeyOpen)}
+            >
+              <span>AI Provider (API Key)</span>
+              <ChevronDown size={16} className={apiKeyOpen ? "rotate" : ""} />
+            </button>
+
+            {apiKeyOpen && (
+              <div className="sidebar-dropdown-content">
+                <div className="settings-row">
+                  <div className="settings-label">
+                    <strong>OpenRouter API Key</strong>
+                    <span>
+                      {hasKey
+                        ? "A key is saved on this device."
+                        : "Get a free key at openrouter.ai/settings/keys"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="app-picker-search">
+                  <input
+                    type="password"
+                    placeholder={hasKey ? "Enter a new key to replace it" : "sk-or-v1-..."}
+                    value={apiKeyInput}
+                    onChange={(e) => setApiKeyInput(e.target.value)}
+                  />
+                </div>
+
+                <button
+                  className="app-picker-add-btn"
+                  disabled={!apiKeyInput.trim() || savingKey}
+                  onClick={handleSaveApiKey}
+                >
+                  {savingKey ? "Saving..." : keySaved ? "Saved ✓" : "Save Key"}
+                </button>
+
+                {hasKey && (
+                  <button
+                    className="app-picker-add-btn"
+                    style={{ marginTop: 8, opacity: 0.7 }}
+                    onClick={handleClearApiKey}
+                  >
+                    Remove Saved Key
+                  </button>
+                )}
               </div>
             )}
           </div>
