@@ -131,6 +131,169 @@
 
 .overview-item em.ok{ color:#00ff9c; }
 
+.overview-item.muted{
+    color:#6a9aab;
+    border-bottom:none;
+}
+
+.overview-item.clickable{
+    cursor:pointer;
+    transition:background .15s, color .15s;
+    border-radius:8px;
+    margin:0 -6px;
+    padding-left:6px;
+    padding-right:6px;
+}
+
+.overview-item.clickable:hover{
+    background:rgba(0,229,255,.08);
+    color:#e8fbff;
+}
+
+.desktop-refresh-btn{
+    background:transparent;
+    border:1px solid rgba(0,229,255,.25);
+    color:#00e5ff;
+    border-radius:8px;
+    width:28px;
+    height:28px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    transition:.2s;
+    flex-shrink:0;
+}
+
+.desktop-refresh-btn:hover:not(:disabled){
+    background:rgba(0,229,255,.12);
+    border-color:rgba(0,229,255,.5);
+}
+
+.desktop-refresh-btn:disabled{
+    opacity:.5;
+    cursor:default;
+}
+
+.desktop-refresh-btn .spin{
+    animation:spin 0.8s linear infinite;
+}
+
+/* Start-menu style icon tiles */
+.places-label{
+    font-size:10px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:#6a9aab;
+    margin:4px 0 8px;
+}
+
+.apps-label{
+    margin-top:12px;
+}
+
+.icon-tile-grid{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:8px;
+}
+
+.places-grid{
+    grid-template-columns:repeat(4, 1fr);
+}
+
+.apps-grid{
+    grid-template-columns:repeat(4, 1fr);
+    max-height:180px;
+    overflow-y:auto;
+    padding-right:2px;
+}
+
+.drawer-grid{
+    grid-template-columns:repeat(4, 1fr);
+    max-height:60vh;
+    overflow-y:auto;
+}
+
+.icon-tile{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    padding:10px 4px 8px;
+    border:none;
+    border-radius:12px;
+    background:rgba(255,255,255,.04);
+    cursor:pointer;
+    transition:background .15s, transform .15s, box-shadow .15s;
+    min-height:72px;
+    color:#e8fbff;
+}
+
+.icon-tile:hover{
+    background:rgba(0,229,255,.12);
+    transform:translateY(-1px);
+    box-shadow:0 4px 14px rgba(0,229,255,.15);
+}
+
+.tile-icon{
+    width:40px;
+    height:40px;
+    border-radius:12px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+}
+
+.tile-name{
+    font-size:10px;
+    line-height:1.2;
+    text-align:center;
+    max-width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    color:#bfefff;
+    padding:0 2px;
+}
+
+/* Place colors (Start-menu vibe) */
+.tile-blue .tile-icon{ background:rgba(59,130,246,.25); color:#60a5fa; }
+.tile-cyan .tile-icon{ background:rgba(0,229,255,.2); color:#22d3ee; }
+.tile-green .tile-icon{ background:rgba(52,211,153,.2); color:#34d399; }
+.tile-pink .tile-icon{ background:rgba(244,114,182,.2); color:#f472b6; }
+.tile-purple .tile-icon{ background:rgba(167,139,250,.22); color:#a78bfa; }
+.tile-orange .tile-icon{ background:rgba(251,146,60,.22); color:#fb923c; }
+.tile-teal .tile-icon{ background:rgba(45,212,191,.2); color:#2dd4bf; }
+.tile-default .tile-icon{ background:rgba(0,229,255,.12); color:#00e5ff; }
+
+.tile-folder .tile-icon{ background:rgba(251,191,36,.18); color:#fbbf24; }
+.tile-app .tile-icon{ background:rgba(0,229,255,.15); color:#67e8f9; }
+.tile-file .tile-icon{ background:rgba(148,163,184,.15); color:#94a3b8; }
+
+.tile-more .tile-icon{
+    background:rgba(255,255,255,.06);
+    color:#7fb8cc;
+    font-size:13px;
+    font-weight:600;
+}
+
+.tile-empty{
+    grid-column:1 / -1;
+    text-align:center;
+    font-size:12px;
+    color:#6a9aab;
+    padding:16px 0;
+}
+
+.ai-overview{
+    display:flex;
+    flex-direction:column;
+    min-height:0;
+}
+
 /* Orb card — no card background/border, just the video floating in place */
 .orb-card{
     display:flex;
