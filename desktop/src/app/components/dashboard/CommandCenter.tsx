@@ -1,25 +1,155 @@
 import "./CommandCenter.css";
-import { useEffect, useState } from "react";
-import { useSystem } from "../../hooks/useSystem";
+import { useEffect, useState, useCallback } from "react";
 import type { Message } from "../layout/MainLayout";
 import type { VoiceControls } from "../../voice/useVoice";
 import heartVideo from "../../../assets/vsmart-ai-videos/vsmart-heart.mp4";
 import DetailDrawer from "./DetailDrawer";
 
 import {
-  Cpu,
-  Database,
-  Mic,
   Bot,
-  Server,
   Info,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  Folder,
+  File,
+  AppWindow,
+  RefreshCw,
+  Monitor,
+  Home,
+  Download,
+  FileText,
+  Image,
+  Music,
+  Video,
+  HardDrive
 } from "lucide-react";
 
 interface CommandCenterProps {
   messages: Message[];
   voice: VoiceControls;
+}
+
+interface DesktopItem {
+  name: string;
+  displayName: string;
+  path: string;
+  type: "folder" | "file" | "shortcut" | "app" | "place";
+  extension: string | null;
+  size: number | null;
+  modified: string | null;
+  placeId?: string;
+}
+
+/** Start-menu style tile icon — no purple link glyph. */
+function tileIcon(item: DesktopItem) {
+  if (item.type === "place") {
+    switch (item.placeId) {
+      case "home":
+        return <Home size={22} />;
+      case "documents":
+        return <FileText size={22} />;
+      case "downloads":
+        return <Download size={22} />;
+      case "pictures":
+        return <Image size={22} />;
+      case "music":
+        return <Music size={22} />;
+      case "videos":
+        return <Video size={22} />;
+      case "desktop":
+        return <HardDrive size={22} />;
+      default:
+        return <Folder size={22} />;
+    }
+  }
+  switch (item.type) {
+    case "folder":
+      return <Folder size={22} />;
+    case "app":
+    case "shortcut":
+      return <AppWindow size={22} />;
+    default:
+      return <File size={22} />;
+  }
+}
+
+function placeColor(placeId?: string): string {
+  switch (placeId) {
+    case "home":
+      return "tile-blue";
+    case "documents":
+      return "tile-cyan";
+    case "downloads":
+      return "tile-green";
+    case "pictures":
+      return "tile-pink";
+    case "music":
+      return "tile-purple";
+    case "videos":
+      return "tile-orange";
+    case "desktop":
+      return "tile-teal";
+    default:
+      return "tile-default";
+  }
+}
+
+/** Loads Desktop items + system places only while Command Center is mounted. */
+function useDesktopItems() {
+  const [items, setItems] = useState<DesktopItem[]>([]);
+  const [places, setPlaces] = useState<DesktopItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  const load = useCallback(async (force = false) => {
+    try {
+      setLoading(true);
+      const [desk, sysPlaces] = await Promise.all([
+        window.vsmart.system.getDesktopItems(force),
+        window.vsmart.system.getSystemPlaces()
+      ]);
+      setItems(Array.isArray(desk) ? desk : []);
+      setPlaces(Array.isArray(sysPlaces) ? sysPlaces : []);
+      setError(false);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const [desk, sysPlaces] = await Promise.all([
+          window.vsmart.system.getDesktopItems(false),
+          window.vsmart.system.getSystemPlaces()
+        ]);
+        if (!cancelled) {
+          setItems(Array.isArray(desk) ? desk : []);
+          setPlaces(Array.isArray(sysPlaces) ? sysPlaces : []);
+          setError(false);
+        }
+      } catch {
+        if (!cancelled) setError(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    const interval = setInterval(() => {
+      if (!cancelled) load(false);
+    }, 60_000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [load]);
+
+  return { items, places, loading, error, refresh: () => load(true) };
 }
 
 interface MarketItem {
@@ -66,40 +196,15 @@ function useMarketFeed() {
   return { feed, loading, error, lastUpdated };
 }
 
-function Gauge({ label, value }: { label: string; value: number }) {
-  const safeValue = Math.min(100, Math.max(0, Math.round(value || 0)));
-  const circumference = 2 * Math.PI * 34;
-  const offset = circumference - (safeValue / 100) * circumference;
-
-  let strokeColor = "#00e5ff";
-  if (safeValue >= 85) strokeColor = "#ff5c7a";
-  else if (safeValue >= 70) strokeColor = "#ff9f43";
-
-  return (
-    <div className="gauge" title={`${label}: ${safeValue}%`}>
-      <svg viewBox="0 0 80 80">
-        <circle cx="40" cy="40" r="34" className="gauge-track" />
-        <circle
-          cx="40"
-          cy="40"
-          r="34"
-          className="gauge-fill"
-          style={{ stroke: strokeColor }}
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-        />
-      </svg>
-      <div className="gauge-center">
-        <strong>{safeValue}%</strong>
-      </div>
-      <span className="gauge-label">{label}</span>
-    </div>
-  );
-}
-
-export default function CommandCenter({ messages, voice }: CommandCenterProps) {
-  const system = useSystem();
+export default function CommandCenter({ messages, voice: _voice }: CommandCenterProps) {
   const { feed: marketFeed, loading: marketLoading, error: marketError, lastUpdated } = useMarketFeed();
+  const {
+    items: desktopItems,
+    places,
+    loading: desktopLoading,
+    error: desktopError,
+    refresh: refreshDesktop
+  } = useDesktopItems();
   const lastReply = [...messages].reverse().find((m) => m.sender === "VSmart");
 
   const [drawer, setDrawer] = useState<{
@@ -120,6 +225,14 @@ export default function CommandCenter({ messages, voice }: CommandCenterProps) {
     setDrawer((prev) => ({ ...prev, open: false }));
   };
 
+  const openDesktopItem = async (item: DesktopItem) => {
+    try {
+      await window.vsmart.system.openDesktopItem(item.path);
+    } catch {
+      /* ignore */
+    }
+  };
+
   const secondsAgo = lastUpdated
     ? Math.max(0, Math.round((Date.now() - lastUpdated.getTime()) / 1000))
     : null;
@@ -128,90 +241,107 @@ export default function CommandCenter({ messages, voice }: CommandCenterProps) {
     <div className="command-center">
       {/* Row 1 */}
       <div className="cc-row cc-row-top">
-        {/* AI Core Overview */}
+        {/* AI Core Overview — left places list + right apps (3 per row) */}
         <div className="cc-card ai-overview">
           <div className="card-header">
             <span className="icon-badge badge-cyan">
-              <Cpu size={15} />
+              <Monitor size={15} />
             </span>
             <h3>AI CORE OVERVIEW</h3>
+            <button
+              className="desktop-refresh-btn"
+              title="Refresh"
+              onClick={() => refreshDesktop()}
+              disabled={desktopLoading}
+            >
+              <RefreshCw size={13} className={desktopLoading ? "spin" : ""} />
+            </button>
           </div>
 
-          <div
-            className="overview-item clickable"
-            onClick={() =>
-              openDrawer("AI Core", (
-                <div>
-                  <p><strong>Status:</strong> Active</p>
-                  <p><strong>Version:</strong> v1.0.0</p>
-                  <p><strong>Mode:</strong> Optimal</p>
-                  <p>Core is healthy and processing all requests normally.</p>
-                </div>
-              ))
-            }
-          >
-            <Cpu size={16} /> <span>AI Core</span> <em className="ok">Active</em>
-          </div>
+          <div className="overview-split">
+            {/* LEFT — Places list (icon + name) */}
+            <div className="places-panel">
+              <div className="places-label">Places</div>
+              <div className="places-list">
+                {places.map((p) => (
+                  <button
+                    key={p.placeId || p.path}
+                    className={`place-row ${placeColor(p.placeId)}`}
+                    title={p.path}
+                    onClick={() => openDesktopItem(p)}
+                  >
+                    <span className="place-icon">{tileIcon(p)}</span>
+                    <span className="place-name">{p.displayName}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
 
-          <div
-            className="overview-item clickable"
-            onClick={() =>
-              openDrawer("Memory", (
-                <div>
-                  <p><strong>Status:</strong> Stored</p>
-                  <p>Long-term and short-term memory systems are operational.</p>
-                  <p>Conversation context is being maintained.</p>
-                </div>
-              ))
-            }
-          >
-            <Database size={16} /> <span>Memory</span> <em>Stored</em>
-          </div>
+            {/* RIGHT — Desktop apps, 3 per row, icon above name */}
+            <div className="apps-panel">
+              <div className="places-label">Desktop</div>
+              <div className="apps-grid-3">
+                {desktopLoading && desktopItems.length === 0 && (
+                  <div className="tile-empty">Scanning…</div>
+                )}
+                {desktopError && desktopItems.length === 0 && (
+                  <div className="tile-empty">Could not read Desktop</div>
+                )}
+                {!desktopLoading && !desktopError && desktopItems.length === 0 && (
+                  <div className="tile-empty">Desktop is empty</div>
+                )}
 
-          <div
-            className="overview-item clickable"
-            onClick={() =>
-              openDrawer("Voice System", (
-                <div>
-                  <p><strong>Status:</strong> {voice.wakeActive ? "Online" : "Off"}</p>
-                  <p><strong>Listening:</strong> {voice.listening ? "Yes" : "No"}</p>
-                  <p>Wake word detection and speech recognition status.</p>
-                </div>
-              ))
-            }
-          >
-            <Mic size={16} /> <span>Voice</span>
-            <em className={voice.wakeActive ? "ok" : ""}>
-              {voice.wakeActive ? "Online" : "Off"}
-            </em>
-          </div>
+                {desktopItems.slice(0, 15).map((item) => (
+                  <button
+                    key={item.path}
+                    className={`icon-tile ${
+                      item.type === "folder"
+                        ? "tile-folder"
+                        : item.type === "app" || item.type === "shortcut"
+                          ? "tile-app"
+                          : "tile-file"
+                    }`}
+                    title={item.name}
+                    onClick={() => openDesktopItem(item)}
+                  >
+                    <span className="tile-icon">{tileIcon(item)}</span>
+                    <span className="tile-name">{item.displayName}</span>
+                  </button>
+                ))}
 
-          <div
-            className="overview-item clickable"
-            onClick={() =>
-              openDrawer("Agents", (
-                <div>
-                  <p><strong>Running:</strong> 2</p>
-                  <p>Background agents are active and ready for tasks.</p>
-                </div>
-              ))
-            }
-          >
-            <Bot size={16} /> <span>Agents</span> <em>2 Running</em>
-          </div>
-
-          <div
-            className="overview-item clickable"
-            onClick={() =>
-              openDrawer("System", (
-                <div>
-                  <p><strong>Status:</strong> Optimal</p>
-                  <p>All core systems are running within normal parameters.</p>
-                </div>
-              ))
-            }
-          >
-            <Server size={16} /> <span>System</span> <em className="ok">Optimal</em>
+                {desktopItems.length > 15 && (
+                  <button
+                    className="icon-tile tile-more"
+                    onClick={() =>
+                      openDrawer("Desktop", (
+                        <div className="apps-grid-3 drawer-grid">
+                          {desktopItems.map((item) => (
+                            <button
+                              key={item.path}
+                              className={`icon-tile ${
+                                item.type === "folder"
+                                  ? "tile-folder"
+                                  : item.type === "app" || item.type === "shortcut"
+                                    ? "tile-app"
+                                    : "tile-file"
+                              }`}
+                              title={item.name}
+                              onClick={() => openDesktopItem(item)}
+                            >
+                              <span className="tile-icon">{tileIcon(item)}</span>
+                              <span className="tile-name">{item.displayName}</span>
+                            </button>
+                          ))}
+                        </div>
+                      ))
+                    }
+                  >
+                    <span className="tile-icon more-count">+{desktopItems.length - 15}</span>
+                    <span className="tile-name">More</span>
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -299,23 +429,9 @@ export default function CommandCenter({ messages, voice }: CommandCenterProps) {
         </div>
       </div>
 
-      {/* Row 2 */}
+      {/* Row 2 — LLM only */}
       <div className="cc-row cc-row-bottom">
-        <div className="cc-card system-monitor">
-          <div className="card-header">
-            <span className="icon-badge badge-cyan">
-              <Server size={15} />
-            </span>
-            <h3>SYSTEM MONITOR</h3>
-          </div>
-          <div className="gauges">
-            <Gauge label="CPU" value={system?.cpu ?? 0} />
-            <Gauge label="RAM" value={system?.ram ?? 0} />
-            <Gauge label="Disk" value={system?.storage ?? 0} />
-          </div>
-        </div>
-
-        <div className="cc-card llm-status">
+        <div className="cc-card llm-status llm-status-wide">
           <div className="card-header">
             <span className="icon-badge badge-purple">
               <Bot size={15} />

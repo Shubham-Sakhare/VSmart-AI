@@ -1,7 +1,11 @@
 .command-center{
     display:flex;
     flex-direction:column;
-    gap:20px;
+    gap:16px;
+}
+
+.llm-status-wide{
+    width:100%;
 }
 
 .cc-row{
@@ -14,7 +18,7 @@
 }
 
 .cc-row-bottom{
-    grid-template-columns:1fr 1fr;
+    grid-template-columns:1fr;
 }
 
 .cc-card{
@@ -76,16 +80,13 @@
 }
 
 .icon-badge{
-
     width:32px;
     height:32px;
     min-width:32px;
     border-radius:50%;
-
     display:flex;
     align-items:center;
     justify-content:center;
-
 }
 
 .badge-cyan{
@@ -131,7 +132,230 @@
 
 .overview-item em.ok{ color:#00ff9c; }
 
-/* Orb card — no card background/border, just the video floating in place */
+.overview-item.muted{
+    color:#6a9aab;
+    border-bottom:none;
+}
+
+.overview-item.clickable{
+    cursor:pointer;
+    transition:background .15s, color .15s;
+    border-radius:8px;
+    margin:0 -6px;
+    padding-left:6px;
+    padding-right:6px;
+}
+
+.overview-item.clickable:hover{
+    background:rgba(0,229,255,.08);
+    color:#e8fbff;
+}
+
+.desktop-refresh-btn{
+    background:transparent;
+    border:1px solid rgba(0,229,255,.25);
+    color:#00e5ff;
+    border-radius:8px;
+    width:28px;
+    height:28px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    transition:.2s;
+    flex-shrink:0;
+}
+
+.desktop-refresh-btn:hover:not(:disabled){
+    background:rgba(0,229,255,.12);
+    border-color:rgba(0,229,255,.5);
+}
+
+.desktop-refresh-btn:disabled{
+    opacity:.5;
+    cursor:default;
+}
+
+.desktop-refresh-btn .spin{
+    animation:spin 0.8s linear infinite;
+}
+
+/* AI Core Overview — split: places list left + apps 3-col right */
+.ai-overview{
+    display:flex;
+    flex-direction:column;
+    min-height:0;
+}
+
+.overview-split{
+    display:grid;
+    grid-template-columns: minmax(110px, 38%) 1fr;
+    gap:12px;
+    min-height:0;
+    flex:1;
+}
+
+.places-panel,
+.apps-panel{
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+}
+
+.places-label{
+    font-size:10px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:#6a9aab;
+    margin:0 0 8px;
+}
+
+/* LEFT — vertical list: icon | name */
+.places-list{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    overflow-y:auto;
+    max-height:260px;
+    padding-right:2px;
+}
+
+.place-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    width:100%;
+    padding:8px 10px;
+    border:none;
+    border-radius:10px;
+    background:rgba(255,255,255,.04);
+    cursor:pointer;
+    transition:background .15s;
+    color:#e8fbff;
+    text-align:left;
+}
+
+.place-row:hover{
+    background:rgba(0,229,255,.12);
+}
+
+.place-icon{
+    width:28px;
+    height:28px;
+    border-radius:8px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+}
+
+.place-icon svg{
+    width:16px;
+    height:16px;
+}
+
+.place-name{
+    font-size:12px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    color:#bfefff;
+}
+
+/* Place row colors */
+.place-row.tile-blue .place-icon{ background:rgba(59,130,246,.25); color:#60a5fa; }
+.place-row.tile-cyan .place-icon{ background:rgba(0,229,255,.2); color:#22d3ee; }
+.place-row.tile-green .place-icon{ background:rgba(52,211,153,.2); color:#34d399; }
+.place-row.tile-pink .place-icon{ background:rgba(244,114,182,.2); color:#f472b6; }
+.place-row.tile-purple .place-icon{ background:rgba(167,139,250,.22); color:#a78bfa; }
+.place-row.tile-orange .place-icon{ background:rgba(251,146,60,.22); color:#fb923c; }
+.place-row.tile-teal .place-icon{ background:rgba(45,212,191,.2); color:#2dd4bf; }
+.place-row.tile-default .place-icon{ background:rgba(0,229,255,.12); color:#00e5ff; }
+
+/* RIGHT — apps grid: 3 per row, icon above name */
+.apps-grid-3{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:8px;
+    max-height:260px;
+    overflow-y:auto;
+    padding-right:2px;
+}
+
+.drawer-grid{
+    max-height:60vh;
+}
+
+.icon-tile{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    padding:10px 4px 8px;
+    border:none;
+    border-radius:12px;
+    background:rgba(255,255,255,.04);
+    cursor:pointer;
+    transition:background .15s, transform .15s, box-shadow .15s;
+    min-height:72px;
+    color:#e8fbff;
+}
+
+.icon-tile:hover{
+    background:rgba(0,229,255,.12);
+    transform:translateY(-1px);
+    box-shadow:0 4px 14px rgba(0,229,255,.15);
+}
+
+.tile-icon{
+    width:40px;
+    height:40px;
+    border-radius:12px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+}
+
+.tile-name{
+    font-size:10px;
+    line-height:1.2;
+    text-align:center;
+    max-width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    color:#bfefff;
+    padding:0 2px;
+}
+
+.tile-folder .tile-icon{ background:rgba(251,191,36,.18); color:#fbbf24; }
+.tile-app .tile-icon{ background:rgba(0,229,255,.15); color:#67e8f9; }
+.tile-file .tile-icon{ background:rgba(148,163,184,.15); color:#94a3b8; }
+
+.tile-more .tile-icon{
+    background:rgba(255,255,255,.06);
+    color:#7fb8cc;
+    font-size:13px;
+    font-weight:600;
+}
+
+.tile-empty{
+    grid-column:1 / -1;
+    text-align:center;
+    font-size:12px;
+    color:#6a9aab;
+    padding:16px 0;
+}
+
+@media (max-width:900px){
+    .overview-split{
+        grid-template-columns:1fr;
+    }
+}
+
+/* Orb card */
 .orb-card{
     display:flex;
     flex-direction:column;
@@ -140,7 +364,6 @@
     text-align:center;
     position:relative;
     min-height:220px;
-
     background:none;
     border:none;
     padding:20px 0;
@@ -183,7 +406,6 @@
 }
 
 .globe-ring.r2{ border-color:rgba(168,85,247,.3); }
-
 .globe-ring.r1{ width:70px;height:70px; animation:spin 6s linear infinite; }
 .globe-ring.r2{ width:88px;height:88px; animation:spin 10s linear infinite reverse; }
 .globe-ring.r3{ width:100px;height:100px; animation:spin 14s linear infinite; }
@@ -193,7 +415,6 @@
     to{ transform:rotate(360deg); }
 }
 
-/* Video orb variant — swap in once vsmart-heart.mp4 is added to src/assets/vsmart-ai-videos/ */
 .globe-wrap.video-mode{
     border-radius:50%;
     overflow:hidden;
@@ -267,152 +488,6 @@
     font-size:12px;
     text-align:center;
     padding:16px 0;
-}
-
-/* Active agents */
-.agents-grid{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:10px;
-}
-
-.agent-tile{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    padding:12px;
-    border-radius:12px;
-    background:rgba(0,229,255,.05);
-    border:1px solid rgba(0,255,255,.1);
-    font-size:12px;
-    color:#cdeeff;
-}
-
-.agent-tile span{ flex:1; }
-
-.dot-online, .dot-idle{
-    width:8px;
-    height:8px;
-    border-radius:50%;
-}
-
-.dot-online{ background:#00ff80; box-shadow:0 0 8px #00ff80; }
-.dot-idle{ background:#5a7a8a; }
-
-/* Timeline */
-.timeline-item{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    padding:8px 0;
-    font-size:12px;
-    color:#cdeeff;
-    border-bottom:1px solid rgba(255,255,255,.05);
-}
-
-.tl-time{ width:60px; opacity:.6; }
-
-.tl-dot{
-    width:6px;
-    height:6px;
-    border-radius:50%;
-    background:#00e5ff;
-}
-
-.tl-title{ flex:1; }
-
-.tl-status{ opacity:.6; font-size:11px; }
-
-/* Quick commands */
-.quick-cmds{
-    display:flex;
-    flex-direction:column;
-    gap:10px;
-}
-
-.quick-cmds button{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    padding:12px 14px;
-    border-radius:12px;
-    background:rgba(0,229,255,.06);
-    border:1px solid rgba(0,255,255,.12);
-    color:#cdeeff;
-    cursor:pointer;
-    font-size:13px;
-    transition:.3s;
-}
-
-.quick-cmds button:hover{
-    background:rgba(0,229,255,.15);
-    box-shadow:0 0 15px rgba(0,229,255,.2);
-}
-
-/* Gauges */
-.gauges{
-    display:flex;
-    justify-content:space-around;
-}
-
-.gauge{
-    position:relative;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-}
-
-.gauge svg{
-    width:80px;
-    height:80px;
-    transform:rotate(-90deg);
-}
-
-.gauge-track{
-    fill:none;
-    stroke:rgba(255,255,255,.08);
-    stroke-width:6;
-}
-
-.gauge-fill{
-    fill:none;
-    stroke:#00e5ff;
-    stroke-width:6;
-    stroke-linecap:round;
-    transition:stroke-dashoffset .6s ease;
-}
-
-.gauge-center{
-    position:absolute;
-    top:50%;
-    left:50%;
-    transform:translate(-50%,-50%);
-    font-size:13px;
-    color:white;
-}
-
-.gauge-label{
-    margin-top:6px;
-    font-size:11px;
-    color:#7fb8cc;
-}
-
-/* Memory insights */
-.memory-stats{
-    display:flex;
-    justify-content:space-around;
-    text-align:center;
-}
-
-.memory-stats strong{
-    display:block;
-    font-size:20px;
-    color:#00e5ff;
-}
-
-.memory-stats span{
-    font-size:11px;
-    color:#7fb8cc;
 }
 
 /* LLM status */

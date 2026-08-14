@@ -170,8 +170,6 @@ ipcRenderer.invoke("launcher:pickImage")
 },
 
 
-
-
 system:{
 getInfo:()=>
 ipcRenderer.invoke("system:getInfo"),
@@ -183,9 +181,19 @@ getChromeProfiles:()=>
 ipcRenderer.invoke("system:getChromeProfiles"),
 
 openChromeProfile:(directory:string)=>
-ipcRenderer.invoke("system:openChromeProfile",directory)
-},
+ipcRenderer.invoke("system:openChromeProfile",directory),
 
+/** Desktop folder items (files, folders, shortcuts on the main screen). */
+getDesktopItems:(force?:boolean)=>
+ipcRenderer.invoke("system:getDesktopItems",force),
+
+/** Quick places: Home, Documents, Downloads, Pictures, Music, Videos, Desktop */
+getSystemPlaces:()=>
+ipcRenderer.invoke("system:getSystemPlaces"),
+
+openDesktopItem:(itemPath:string)=>
+ipcRenderer.invoke("system:openDesktopItem",itemPath)
+},
 
 
 voice:{
