@@ -33,7 +33,6 @@ const SHORTCUT_EXTS = new Set([".lnk", ".url", ".desktop"]);
 const APP_EXTS = new Set([".exe", ".app", ".bat", ".cmd", ".msi", ".appx", ".msix"]);
 
 function stripExtension(name: string): string {
-  // Remove common shortcut / app suffixes for clean UI labels
   return name
     .replace(/\.lnk$/i, "")
     .replace(/\.url$/i, "")
