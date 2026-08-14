@@ -186,6 +186,13 @@ has:()=>Promise<boolean>;
 clear:()=>Promise<boolean>;
 };
 
+launchPref:{
+get:()=>Promise<boolean>;
+set:(enabled:boolean)=>Promise<boolean>;
+};
+
+openExternal:(url:string)=>Promise<boolean>;
+
 };
 }
 }
