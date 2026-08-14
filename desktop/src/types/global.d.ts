@@ -170,6 +170,27 @@ storage:number;
 searchYoutube:(query:string)=>Promise<string>;
 getChromeProfiles:()=>Promise<{name:string;directory:string}[]>;
 openChromeProfile:(directory:string)=>Promise<boolean>;
+getDesktopItems:(force?:boolean)=>Promise<{
+name:string;
+displayName:string;
+path:string;
+type:"folder"|"file"|"shortcut"|"app"|"place";
+extension:string|null;
+size:number|null;
+modified:string|null;
+placeId?:string;
+}[]>;
+getSystemPlaces:()=>Promise<{
+name:string;
+displayName:string;
+path:string;
+type:"folder"|"file"|"shortcut"|"app"|"place";
+extension:string|null;
+size:number|null;
+modified:string|null;
+placeId?:string;
+}[]>;
+openDesktopItem:(itemPath:string)=>Promise<boolean>;
 };
 
 voice:{

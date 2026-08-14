@@ -1,6 +1,11 @@
 import { ipcMain } from "electron";
 import { getSystemInfo } from "../services/systemMonitor.js";
 import { searchOnYoutube, getChromeProfiles, openChromeProfile } from "../services/systemService.js";
+import {
+  getDesktopItems,
+  getSystemPlaces,
+  openDesktopItem
+} from "../services/desktopItemsService.js";
 
 
 export function registerSystemIPC(){
@@ -59,6 +64,35 @@ export function registerSystemIPC(){
       return true;
     } catch (error) {
       console.error("system:openChromeProfile IPC error:", error);
+      return false;
+    }
+  });
+
+  // Desktop folder contents (apps / folders / files on the main screen).
+  // Lightweight fs scan — only runs when the renderer asks (page open).
+  ipcMain.handle("system:getDesktopItems", async (_, force?: boolean) => {
+    try {
+      return getDesktopItems(!!force);
+    } catch (error) {
+      console.error("system:getDesktopItems IPC error:", error);
+      return [];
+    }
+  });
+
+  ipcMain.handle("system:getSystemPlaces", async () => {
+    try {
+      return getSystemPlaces();
+    } catch (error) {
+      console.error("system:getSystemPlaces IPC error:", error);
+      return [];
+    }
+  });
+
+  ipcMain.handle("system:openDesktopItem", async (_, itemPath: string) => {
+    try {
+      return await openDesktopItem(itemPath);
+    } catch (error) {
+      console.error("system:openDesktopItem IPC error:", error);
       return false;
     }
   });
