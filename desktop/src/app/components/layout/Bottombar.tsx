@@ -1,4 +1,4 @@
-﻿import "./bottombar.css";
+﻿import "./BottomBar.css";
 import type { VoiceControls } from "../../voice/useVoice";
 
 interface BottomBarProps {

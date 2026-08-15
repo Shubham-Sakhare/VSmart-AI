@@ -34,7 +34,6 @@ import {
   Package,
   X,
   Pencil,
-  MessageSquare,
   ChevronLeft,
   ChevronRight
 } from "lucide-react";
@@ -42,7 +41,6 @@ import {
 interface CommandCenterProps {
   messages: Message[];
   voice: VoiceControls;
-  onOpenChat?: () => void;
 }
 
 interface DesktopItem {
@@ -57,7 +55,7 @@ interface DesktopItem {
 }
 
 const CUSTOM_ICONS_KEY = "vsmart_hub_custom_icons";
-const HUB_SETTINGS_KEY = "vsmart_hub_settings";
+export const HUB_SETTINGS_KEY = "vsmart_hub_settings";
 
 export interface HubSettings {
   placesIconSize: number;
@@ -69,7 +67,7 @@ export interface HubSettings {
   showDesktop: boolean;
 }
 
-const DEFAULT_HUB_SETTINGS: HubSettings = {
+export const DEFAULT_HUB_SETTINGS: HubSettings = {
   placesIconSize: 22,
   desktopTextSize: 10,
   desktopIconSize: 48,
@@ -79,11 +77,14 @@ const DEFAULT_HUB_SETTINGS: HubSettings = {
   showDesktop: true
 };
 
-function clamp(n: number, min: number, max: number) {
+export function clampHubValue(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));
 }
 
-function loadHubSettings(): HubSettings {
+// Kept as a local alias so the rest of this file doesn't need renaming.
+const clamp = clampHubValue;
+
+export function loadHubSettings(): HubSettings {
   try {
     const raw = localStorage.getItem(HUB_SETTINGS_KEY);
     if (!raw) return { ...DEFAULT_HUB_SETTINGS };
@@ -92,7 +93,7 @@ function loadHubSettings(): HubSettings {
       placesIconSize: clamp(Number(p.placesIconSize) || 22, 14, 36),
       desktopTextSize: clamp(Number(p.desktopTextSize) || 10, 8, 16),
       desktopIconSize: clamp(Number(p.desktopIconSize) || 48, 32, 72),
-      appsGridCols: clamp(Number(p.appsGridCols) || 3, 2, 5),
+      appsGridCols: clamp(Number(p.appsGridCols) || 3, 2, 6),
       appsLayout: p.appsLayout === "list" ? "list" : "grid",
       showPlaces: p.showPlaces !== false,
       showDesktop: p.showDesktop !== false
@@ -540,8 +541,7 @@ function HubTile({
 
 export default function CommandCenter({
   messages,
-  voice: _voice,
-  onOpenChat
+  voice: _voice
 }: CommandCenterProps) {
   const { feed: marketFeed, loading: marketLoading, error: marketError, lastUpdated } =
     useMarketFeed();
@@ -609,14 +609,8 @@ export default function CommandCenter({
     ? Math.max(0, Math.round((Date.now() - lastUpdated.getTime()) / 1000))
     : null;
 
-  const handleTalkToVSmart = () => {
-    if (onOpenChat) onOpenChat();
-    else window.dispatchEvent(new CustomEvent("vsmart-open-chat"));
-  };
-
   const showPlaces = hubSettings.showPlaces;
   const showDesktop = hubSettings.showDesktop;
-  const placesVisible = showPlaces && !placesCollapsed;
 
   const gridStyle =
     hubSettings.appsLayout === "list"
@@ -789,11 +783,6 @@ export default function CommandCenter({
           </p>
           {lastReply && <p className="last-reply">"{lastReply.text}"</p>}
         </div>
-
-        <button type="button" className="cc-talk-bar" onClick={handleTalkToVSmart}>
-          <MessageSquare size={16} />
-          Talk to VSmart
-        </button>
       </div>
 
       <div className="cc-right">

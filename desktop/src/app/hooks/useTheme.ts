@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 
-export type ThemeId = "neon" | "aurora" | "sunset" | "emerald" | "violet-ink";
+export type ThemeId =
+  | "neon"
+  | "aurora"
+  | "sunset"
+  | "emerald"
+  | "violet-ink"
+  | "glass-light"
+  | "amber-glass"
+  | "cyber-teal"
+  | "ocean-blue";
 
 export interface ThemeDef {
   id: ThemeId;
@@ -13,7 +22,11 @@ export const THEMES: ThemeDef[] = [
   { id: "aurora", label: "Aurora", swatch: ["#6ea8ff", "#b06cff", "#ff8fd6"] },
   { id: "sunset", label: "Sunset", swatch: ["#ff9d3d", "#ff5f7e", "#ffd166"] },
   { id: "emerald", label: "Emerald", swatch: ["#2dd4bf", "#34d399", "#a3ffcf"] },
-  { id: "violet-ink", label: "Violet Ink", swatch: ["#8b5cf6", "#ec4899", "#60a5fa"] }
+  { id: "violet-ink", label: "Violet Ink", swatch: ["#8b5cf6", "#ec4899", "#60a5fa"] },
+  { id: "glass-light", label: "Glass Light", swatch: ["#7c9cff", "#b06cff", "#ff8fd6"] },
+  { id: "amber-glass", label: "Amber Glass", swatch: ["#ff8a3d", "#ff5f7e", "#ffd166"] },
+  { id: "cyber-teal", label: "Cyber Teal", swatch: ["#00ffc8", "#00c2ff", "#0aff9d"] },
+  { id: "ocean-blue", label: "Ocean Blue", swatch: ["#3d7dff", "#7c4dff", "#00d4ff"] }
 ];
 
 const THEME_KEY = "vsmart_theme";

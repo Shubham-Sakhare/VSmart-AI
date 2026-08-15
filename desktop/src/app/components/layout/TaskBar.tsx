@@ -250,14 +250,31 @@ export default function TaskBar({ activePage, onNavigate, voice }: TaskBarProps)
       .catch(() => setLibraryApps([]));
   }, []);
 
+  // Auto-sync: every installed app on the PC shows up in the "System Apps"
+  // panel by itself — no separate "add" step needed anywhere in Settings.
   useEffect(() => {
     if (!libraryOpen) return;
+    let cancelled = false;
     setLibraryLoading(true);
-    window.vsmart.launcher
-      .getLibraryApps()
-      .then(setLibraryApps)
+    Promise.all([window.vsmart.getInstalledApps(), window.vsmart.launcher.getLibraryApps()])
+      .then(async ([installed, existing]) => {
+        if (cancelled) return;
+        const existingIds = new Set(existing.map((a) => a.id));
+        const missing = installed.filter((a) => !existingIds.has(a.id));
+        if (missing.length > 0) {
+          const merged = await window.vsmart.launcher.addLibraryApps(missing);
+          if (!cancelled) setLibraryApps(merged);
+        } else {
+          setLibraryApps(existing);
+        }
+      })
       .catch(() => {})
-      .finally(() => setLibraryLoading(false));
+      .finally(() => {
+        if (!cancelled) setLibraryLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [libraryOpen]);
 
   useEffect(() => {
@@ -609,7 +626,7 @@ export default function TaskBar({ activePage, onNavigate, voice }: TaskBarProps)
               </button>
             </div>
 
-            {libraryApps.length > 4 && (
+            {libraryApps.length > 0 && (
               <div className="app-search">
                 <Search size={14} />
                 <input
@@ -622,13 +639,9 @@ export default function TaskBar({ activePage, onNavigate, voice }: TaskBarProps)
             )}
 
             {libraryLoading && libraryApps.length === 0 ? (
-              <div className="apps-loading">Loading...</div>
+              <div className="apps-loading">Loading installed apps...</div>
             ) : libraryApps.length === 0 ? (
-              <div className="apps-empty">
-                No apps added yet.
-                <br />
-                Go to Settings → Add System App to add some.
-              </div>
+              <div className="apps-empty">No apps found on this PC.</div>
             ) : (
               <div className="start-grid">
                 {filteredLibraryApps.map((app) => (

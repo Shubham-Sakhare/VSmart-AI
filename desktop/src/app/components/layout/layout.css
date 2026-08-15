@@ -5,7 +5,7 @@
     height:100vh;
     box-sizing:border-box;
     overflow:hidden;
-    background:#050816;
+    background:var(--bg-deep);
     padding:0;
     transition:padding .25s ease;
 }
@@ -40,9 +40,9 @@ body[data-taskbar-pos="right"] .app-shell{
     position:relative;
     min-width:0;
     background:
-        radial-gradient(circle at 15% 0%, rgba(168,85,247,.14) 0%, transparent 40%),
-        radial-gradient(circle at 85% 15%, rgba(0,229,255,.14) 0%, transparent 40%),
-        radial-gradient(circle at top, #10254b 0%, #07111f 45%, #040812 100%);
+        radial-gradient(circle at 15% 0%, rgba(var(--accent-2-rgb), .14) 0%, transparent 40%),
+        radial-gradient(circle at 85% 15%, rgba(var(--accent-rgb), .14) 0%, transparent 40%),
+        radial-gradient(circle at top, var(--bg-panel) 0%, var(--bg-deep) 45%, var(--bg-deep) 100%);
 }
 
 .coming-soon{
@@ -50,7 +50,7 @@ body[data-taskbar-pos="right"] .app-shell{
     align-items:center;
     justify-content:center;
     height:100%;
-    color:#8fb8cc;
+    color:var(--text-dim);
     opacity:.7;
     padding:60px;
     text-align:center;
@@ -69,12 +69,12 @@ body[data-taskbar-pos="right"] .app-shell{
   display:flex;
   align-items:center;
   justify-content:center;
-  background:linear-gradient(135deg,#00c8ff,#00ffd5);
+  background:linear-gradient(135deg,var(--accent),#00ffd5);
   border:none;
-  color:#04141c;
+  color:var(--bg-deep);
   cursor:pointer;
   box-shadow:
-    0 6px 24px rgba(0,229,255,.4),
+    0 6px 24px rgba(var(--accent-rgb), .4),
     0 0 0 1px rgba(255,255,255,.08) inset;
   z-index:150;
   transition:transform .25s ease, box-shadow .25s ease, bottom .25s ease, right .25s ease;
@@ -100,7 +100,7 @@ body[data-taskbar-pos="left"] .chat-launcher{
 .chat-launcher:hover{
     transform:scale(1.08);
     box-shadow:
-      0 6px 30px rgba(0,229,255,.6),
+      0 6px 30px rgba(var(--accent-rgb), .6),
       0 0 0 1px rgba(255,255,255,.12) inset;
 }
 
@@ -122,12 +122,12 @@ body[data-taskbar-pos="left"] .chat-launcher{
 }
 
 .page-content::-webkit-scrollbar-thumb{
-    background:#00d9ff55;
+    background:var(--accent)55;
     border-radius:20px;
 }
 
 .page-content::-webkit-scrollbar-thumb:hover{
-    background:#00d9ff88;
+    background:var(--accent)88;
 }
 
 .page-content::-webkit-scrollbar-track{
