@@ -1,0 +1,114 @@
+/* =====================================================================
+   VSmart AI — Theme Tokens
+   Each theme only overrides CSS custom properties on :root.
+   Components must consume var(--accent-*) / var(--bg-*) — never hex
+   literals — so switching [data-theme] repaints the whole app for free
+   with zero extra CSS shipped per-component.
+   ===================================================================== */
+
+:root,
+[data-theme="neon"] {
+  --bg-deep: #030509;
+  --bg-panel: rgba(8, 20, 38, 0.65);
+  --bg-panel-soft: rgba(255, 255, 255, 0.05);
+  --border-soft: rgba(255, 255, 255, 0.12);
+
+  --accent: #00e5ff;
+  --accent-2: #a855f7;
+  --accent-3: #ff2e9a;
+
+  --gradient-primary: linear-gradient(90deg, var(--accent), var(--accent-2));
+  --gradient-hero: linear-gradient(90deg, #ffffff, var(--accent) 45%, var(--accent-2) 75%, var(--accent-3));
+  --glow-accent: 0 0 24px rgba(0, 229, 255, 0.35);
+  --glow-accent-2: 0 0 24px rgba(168, 85, 247, 0.35);
+
+  --text-primary: #e8f7fc;
+  --text-dim: #8fdfff;
+}
+
+[data-theme="aurora"] {
+  --bg-deep: #050414;
+  --bg-panel: rgba(20, 16, 46, 0.62);
+  --bg-panel-soft: rgba(255, 255, 255, 0.05);
+  --border-soft: rgba(255, 255, 255, 0.13);
+
+  --accent: #6ea8ff;
+  --accent-2: #b06cff;
+  --accent-3: #ff8fd6;
+
+  --gradient-primary: linear-gradient(90deg, var(--accent), var(--accent-2));
+  --gradient-hero: linear-gradient(90deg, #ffffff, var(--accent) 45%, var(--accent-2) 75%, var(--accent-3));
+  --glow-accent: 0 0 24px rgba(110, 168, 255, 0.35);
+  --glow-accent-2: 0 0 24px rgba(176, 108, 255, 0.35);
+
+  --text-primary: #eef2ff;
+  --text-dim: #b9c6ff;
+}
+
+[data-theme="sunset"] {
+  --bg-deep: #0c0605;
+  --bg-panel: rgba(38, 18, 10, 0.6);
+  --bg-panel-soft: rgba(255, 255, 255, 0.05);
+  --border-soft: rgba(255, 200, 150, 0.12);
+
+  --accent: #ff9d3d;
+  --accent-2: #ff5f7e;
+  --accent-3: #ffd166;
+
+  --gradient-primary: linear-gradient(90deg, var(--accent), var(--accent-2));
+  --gradient-hero: linear-gradient(90deg, #ffffff, var(--accent) 45%, var(--accent-2) 75%, var(--accent-3));
+  --glow-accent: 0 0 24px rgba(255, 157, 61, 0.35);
+  --glow-accent-2: 0 0 24px rgba(255, 95, 126, 0.35);
+
+  --text-primary: #fff3e8;
+  --text-dim: #ffcfa3;
+}
+
+[data-theme="emerald"] {
+  --bg-deep: #020a08;
+  --bg-panel: rgba(6, 26, 22, 0.65);
+  --bg-panel-soft: rgba(255, 255, 255, 0.05);
+  --border-soft: rgba(120, 255, 220, 0.12);
+
+  --accent: #2dd4bf;
+  --accent-2: #34d399;
+  --accent-3: #a3ffcf;
+
+  --gradient-primary: linear-gradient(90deg, var(--accent), var(--accent-2));
+  --gradient-hero: linear-gradient(90deg, #ffffff, var(--accent) 45%, var(--accent-2) 75%, var(--accent-3));
+  --glow-accent: 0 0 24px rgba(45, 212, 191, 0.35);
+  --glow-accent-2: 0 0 24px rgba(52, 211, 153, 0.35);
+
+  --text-primary: #e6fff7;
+  --text-dim: #8fe8d4;
+}
+
+[data-theme="violet-ink"] {
+  --bg-deep: #07040f;
+  --bg-panel: rgba(24, 14, 46, 0.65);
+  --bg-panel-soft: rgba(255, 255, 255, 0.05);
+  --border-soft: rgba(200, 160, 255, 0.14);
+
+  --accent: #8b5cf6;
+  --accent-2: #ec4899;
+  --accent-3: #60a5fa;
+
+  --gradient-primary: linear-gradient(90deg, var(--accent), var(--accent-2));
+  --gradient-hero: linear-gradient(90deg, #ffffff, var(--accent) 45%, var(--accent-2) 75%, var(--accent-3));
+  --glow-accent: 0 0 24px rgba(139, 92, 246, 0.35);
+  --glow-accent-2: 0 0 24px rgba(236, 72, 153, 0.35);
+
+  --text-primary: #f4ecff;
+  --text-dim: #d2b9ff;
+}
+
+/* Backward-compat aliases so existing components using the old var
+   names keep working untouched while new/refactored ones use the
+   shorter --accent / --accent-2 / --accent-3 tokens above. */
+:root {
+  --accent-cyan: var(--accent);
+  --accent-purple: var(--accent-2);
+  --accent-pink: var(--accent-3);
+  --glow-cyan: var(--glow-accent);
+  --glow-purple: var(--glow-accent-2);
+}

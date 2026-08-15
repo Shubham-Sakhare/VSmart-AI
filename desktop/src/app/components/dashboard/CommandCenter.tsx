@@ -5,6 +5,12 @@ import type { VoiceControls } from "../../voice/useVoice";
 import heartVideo from "../../../assets/vsmart-ai-videos/vsmart-heart.mp4";
 import DetailDrawer from "./DetailDrawer";
 
+import iconDocuments from "../../../assets/vsmart-ai-images/file-icons/Documents.png";
+import iconDownloads from "../../../assets/vsmart-ai-images/file-icons/Downloads.png";
+import iconMedia from "../../../assets/vsmart-ai-images/file-icons/Media.png";
+import iconMusics from "../../../assets/vsmart-ai-images/file-icons/Musics.png";
+import iconVideos from "../../../assets/vsmart-ai-images/file-icons/Videos.png";
+
 import {
   Info,
   TrendingUp,
@@ -26,12 +32,17 @@ import {
   Lock,
   Film,
   Package,
-  X
+  X,
+  Pencil,
+  MessageSquare,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 
 interface CommandCenterProps {
   messages: Message[];
   voice: VoiceControls;
+  onOpenChat?: () => void;
 }
 
 interface DesktopItem {
@@ -46,6 +57,50 @@ interface DesktopItem {
 }
 
 const CUSTOM_ICONS_KEY = "vsmart_hub_custom_icons";
+const HUB_SETTINGS_KEY = "vsmart_hub_settings";
+
+export interface HubSettings {
+  placesIconSize: number;
+  desktopTextSize: number;
+  desktopIconSize: number;
+  appsGridCols: number;
+  appsLayout: "grid" | "list";
+  showPlaces: boolean;
+  showDesktop: boolean;
+}
+
+const DEFAULT_HUB_SETTINGS: HubSettings = {
+  placesIconSize: 22,
+  desktopTextSize: 10,
+  desktopIconSize: 48,
+  appsGridCols: 3,
+  appsLayout: "grid",
+  showPlaces: true,
+  showDesktop: true
+};
+
+function clamp(n: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, n));
+}
+
+function loadHubSettings(): HubSettings {
+  try {
+    const raw = localStorage.getItem(HUB_SETTINGS_KEY);
+    if (!raw) return { ...DEFAULT_HUB_SETTINGS };
+    const p = JSON.parse(raw);
+    return {
+      placesIconSize: clamp(Number(p.placesIconSize) || 22, 14, 36),
+      desktopTextSize: clamp(Number(p.desktopTextSize) || 10, 8, 16),
+      desktopIconSize: clamp(Number(p.desktopIconSize) || 48, 32, 72),
+      appsGridCols: clamp(Number(p.appsGridCols) || 3, 2, 5),
+      appsLayout: p.appsLayout === "list" ? "list" : "grid",
+      showPlaces: p.showPlaces !== false,
+      showDesktop: p.showDesktop !== false
+    };
+  } catch {
+    return { ...DEFAULT_HUB_SETTINGS };
+  }
+}
 
 function loadCustomIcons(): Record<string, string> {
   try {
@@ -68,21 +123,28 @@ function DefaultIcon({ item, size = 22 }: { item: DesktopItem; size?: number }) 
   const name = (item.displayName || item.name || "").toLowerCase();
   const ext = (item.extension || "").toLowerCase().replace(".", "");
 
-  // ----- Places -----
   if (item.type === "place") {
+    const placeIconMap: Record<string, string> = {
+      documents: iconDocuments,
+      downloads: iconDownloads,
+      pictures: iconMedia,
+      music: iconMusics,
+      videos: iconVideos
+    };
+    const src = item.placeId ? placeIconMap[item.placeId] : undefined;
+    if (src) {
+      return (
+        <img
+          src={src}
+          alt=""
+          style={{ width: size, height: size, objectFit: "contain" }}
+          draggable={false}
+        />
+      );
+    }
     switch (item.placeId) {
       case "home":
         return <Home size={size} />;
-      case "documents":
-        return <FileText size={size} />;
-      case "downloads":
-        return <Download size={size} />;
-      case "pictures":
-        return <Image size={size} />;
-      case "music":
-        return <Music size={size} />;
-      case "videos":
-        return <Video size={size} />;
       case "desktop":
         return <HardDrive size={size} />;
       default:
@@ -90,7 +152,6 @@ function DefaultIcon({ item, size = 22 }: { item: DesktopItem; size?: number }) 
     }
   }
 
-  // ----- Folders (by name) -----
   if (item.type === "folder") {
     if (name.includes("document")) return <FileText size={size} />;
     if (name.includes("download")) return <Download size={size} />;
@@ -104,33 +165,40 @@ function DefaultIcon({ item, size = 22 }: { item: DesktopItem; size?: number }) 
     return <Folder size={size} />;
   }
 
-  // ----- Apps / shortcuts — name keywords (Windows .lnk sab "shortcut" hote hain) -----
   if (item.type === "app" || item.type === "shortcut") {
-    // Design
-    if (name.includes("illustrator") || name.includes("photoshop") || name.includes("figma") || name.includes("canva"))
+    if (
+      name.includes("illustrator") ||
+      name.includes("photoshop") ||
+      name.includes("figma") ||
+      name.includes("canva")
+    )
       return <Image size={size} />;
-    // Office docs
     if (name.includes("word") || name.includes("writer") || name.includes("document"))
       return <FileText size={size} />;
     if (name.includes("excel") || name.includes("calc") || name.includes("sheet"))
       return <FileCode size={size} />;
     if (name.includes("powerpoint") || name.includes("slide") || name.includes("impress"))
       return <Package size={size} />;
-    // PDF
     if (name.includes("pdf") || name.includes("acrobat") || name.includes("reader"))
       return <FileType size={size} />;
-    // Mail
     if (name.includes("mail") || name.includes("outlook") || name.includes("thunderbird"))
       return <FileText size={size} />;
-    // Browser
-    if (name.includes("chrome") || name.includes("firefox") || name.includes("edge") || name.includes("brave"))
+    if (
+      name.includes("chrome") ||
+      name.includes("firefox") ||
+      name.includes("edge") ||
+      name.includes("brave")
+    )
       return <AppWindow size={size} />;
-    // Media
-    if (name.includes("vlc") || name.includes("player") || name.includes("spotify") || name.includes("music"))
+    if (
+      name.includes("vlc") ||
+      name.includes("player") ||
+      name.includes("spotify") ||
+      name.includes("music")
+    )
       return <Music size={size} />;
     if (name.includes("video") || name.includes("movie") || name.includes("film"))
       return <Film size={size} />;
-    // Code / IDE
     if (
       name.includes("code") ||
       name.includes("studio") ||
@@ -140,27 +208,32 @@ function DefaultIcon({ item, size = 22 }: { item: DesktopItem; size?: number }) 
       name.includes("notepad")
     )
       return <FileCode size={size} />;
-    // Launcher / system
     if (name.includes("launcher") || name.includes("start") || name.includes("manager"))
       return <Package size={size} />;
-    // Security
-    if (name.includes("lock") || name.includes("secure") || name.includes("vpn") || name.includes("antivirus"))
+    if (
+      name.includes("lock") ||
+      name.includes("secure") ||
+      name.includes("vpn") ||
+      name.includes("antivirus")
+    )
       return <Lock size={size} />;
-    // Default app
     return <AppWindow size={size} />;
   }
 
-  // ----- Files by extension -----
   if (["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "ico"].includes(ext))
     return <Image size={size} />;
   if (["mp4", "mkv", "avi", "mov", "wmv", "webm"].includes(ext)) return <Film size={size} />;
   if (["mp3", "wav", "flac", "aac", "ogg"].includes(ext)) return <Music size={size} />;
   if (ext === "pdf") return <FileType size={size} />;
   if (["lock", "key", "pem", "crt", "cer", "p12"].includes(ext)) return <Lock size={size} />;
-  if (["js", "ts", "tsx", "jsx", "py", "java", "c", "cpp", "html", "css", "json", "xml"].includes(ext))
+  if (
+    ["js", "ts", "tsx", "jsx", "py", "java", "c", "cpp", "html", "css", "json", "xml"].includes(ext)
+  )
     return <FileCode size={size} />;
   if (["txt", "md", "log", "csv", "doc", "docx"].includes(ext)) return <FileText size={size} />;
-  if (["msi", "msix", "appx", "dmg", "pkg", "deb", "rpm", "apk", "exe", "bat", "cmd"].includes(ext))
+  if (
+    ["msi", "msix", "appx", "dmg", "pkg", "deb", "rpm", "apk", "exe", "bat", "cmd"].includes(ext)
+  )
     return <Package size={size} />;
 
   return <File size={size} />;
@@ -187,11 +260,25 @@ function placeColor(placeId?: string): string {
   }
 }
 
-function typeClass(item: DesktopItem): string {
+function desktopTileClass(item: DesktopItem): string {
   if (item.type === "place") return placeColor(item.placeId);
-  if (item.type === "folder") return "tile-folder";
-  if (item.type === "app" || item.type === "shortcut") return "tile-app";
-  return "tile-file";
+  const colors = [
+    "tile-blue",
+    "tile-cyan",
+    "tile-green",
+    "tile-pink",
+    "tile-purple",
+    "tile-orange",
+    "tile-teal"
+  ];
+  const key = (item.path || item.displayName || item.name || "").toLowerCase();
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) | 0;
+  return colors[Math.abs(hash) % colors.length];
+}
+
+function typeClass(item: DesktopItem): string {
+  return desktopTileClass(item);
 }
 
 function useDesktopItems() {
@@ -291,14 +378,13 @@ function useMarketFeed() {
   return { feed, loading, error, lastUpdated };
 }
 
-/**
- * Left click  → open
- * Right click → edit icon only (no open)
- */
 function HubTile({
   item,
   customIcon,
   layout,
+  placesIconSize,
+  desktopTextSize,
+  desktopIconSize,
   onOpen,
   onIconChange,
   onIconClear
@@ -306,16 +392,18 @@ function HubTile({
   item: DesktopItem;
   customIcon?: string;
   layout: "place" | "desktop";
+  placesIconSize: number;
+  desktopTextSize: number;
+  desktopIconSize: number;
   onOpen: () => void;
   onIconChange: (dataUrl: string) => void;
   onIconClear: () => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const iconSize = layout === "place" ? 16 : 22;
+  const iconSize =
+    layout === "place" ? placesIconSize : Math.round(desktopIconSize * 0.55);
 
-  const openEditPicker = () => {
-    fileRef.current?.click();
-  };
+  const openEditPicker = () => fileRef.current?.click();
 
   const onFilePicked = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -350,22 +438,38 @@ function HubTile({
         <button
           type="button"
           className={`place-row ${typeClass(item)}`}
-          title={`${item.displayName}\nLeft click: open · Right click: change icon`}
+          title={`${item.displayName}\nClick: open`}
           onClick={(e) => {
             e.preventDefault();
             onOpen();
           }}
-          onContextMenu={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            openEditPicker();
-          }}
         >
-          <span className="place-icon">{iconNode}</span>
+          <span
+            className="place-icon"
+            style={{
+              width: placesIconSize + 10,
+              height: placesIconSize + 10
+            }}
+          >
+            {iconNode}
+          </span>
           <span className="place-name">{item.displayName}</span>
+
+          <span
+            className="tile-edit-btn place-edit-abs"
+            title="Change icon"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              openEditPicker();
+            }}
+          >
+            <Pencil size={11} />
+          </span>
+
           {customIcon && (
             <span
-              className="tile-reset-inline"
+              className="tile-reset-inline place-reset-abs"
               title="Reset default icon"
               onClick={(e) => {
                 e.preventDefault();
@@ -373,7 +477,7 @@ function HubTile({
                 onIconClear();
               }}
             >
-              <X size={12} />
+              <X size={11} />
             </span>
           )}
         </button>
@@ -387,19 +491,34 @@ function HubTile({
       <button
         type="button"
         className={`icon-tile ${typeClass(item)}`}
-        title={`${item.displayName}\nLeft click: open · Right click: change icon`}
+        title={`${item.displayName}\nClick: open`}
         onClick={(e) => {
           e.preventDefault();
           onOpen();
         }}
-        onContextMenu={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          openEditPicker();
-        }}
       >
-        <span className="tile-icon">{iconNode}</span>
-        <span className="tile-name">{item.displayName}</span>
+        <span
+          className="tile-icon"
+          style={{ width: desktopIconSize, height: desktopIconSize }}
+        >
+          {iconNode}
+        </span>
+        <span className="tile-name" style={{ fontSize: desktopTextSize }}>
+          {item.displayName}
+        </span>
+
+        <span
+          className="tile-edit-btn tile-edit-float"
+          title="Change icon"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openEditPicker();
+          }}
+        >
+          <Pencil size={11} />
+        </span>
+
         {customIcon && (
           <span
             className="tile-reset-float"
@@ -419,7 +538,11 @@ function HubTile({
   );
 }
 
-export default function CommandCenter({ messages, voice: _voice }: CommandCenterProps) {
+export default function CommandCenter({
+  messages,
+  voice: _voice,
+  onOpenChat
+}: CommandCenterProps) {
   const { feed: marketFeed, loading: marketLoading, error: marketError, lastUpdated } =
     useMarketFeed();
   const {
@@ -434,12 +557,24 @@ export default function CommandCenter({ messages, voice: _voice }: CommandCenter
   const [customIcons, setCustomIcons] = useState<Record<string, string>>(() =>
     loadCustomIcons()
   );
+  const [hubSettings, setHubSettings] = useState<HubSettings>(() => loadHubSettings());
+  const [placesCollapsed, setPlacesCollapsed] = useState(false);
 
   const [drawer, setDrawer] = useState<{
     open: boolean;
     title: string;
     content: React.ReactNode;
   }>({ open: false, title: "", content: null });
+
+  useEffect(() => {
+    const onHubSettings = (e: Event) => {
+      const detail = (e as CustomEvent<HubSettings>).detail;
+      if (detail) setHubSettings(detail);
+      else setHubSettings(loadHubSettings());
+    };
+    window.addEventListener("vsmart-hub-settings", onHubSettings);
+    return () => window.removeEventListener("vsmart-hub-settings", onHubSettings);
+  }, []);
 
   const openDrawer = (title: string, content: React.ReactNode) =>
     setDrawer({ open: true, title, content });
@@ -474,47 +609,97 @@ export default function CommandCenter({ messages, voice: _voice }: CommandCenter
     ? Math.max(0, Math.round((Date.now() - lastUpdated.getTime()) / 1000))
     : null;
 
+  const handleTalkToVSmart = () => {
+    if (onOpenChat) onOpenChat();
+    else window.dispatchEvent(new CustomEvent("vsmart-open-chat"));
+  };
+
+  const showPlaces = hubSettings.showPlaces;
+  const showDesktop = hubSettings.showDesktop;
+  const placesVisible = showPlaces && !placesCollapsed;
+
+  const gridStyle =
+    hubSettings.appsLayout === "list"
+      ? { gridTemplateColumns: "1fr" as const }
+      : { gridTemplateColumns: `repeat(${hubSettings.appsGridCols}, 1fr)` };
+
+  const splitClass = [
+    "overview-split",
+    !showPlaces || placesCollapsed ? "no-places" : "",
+    !showDesktop ? "no-desktop" : ""
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <div className="command-center">
-      <div className="cc-row cc-row-top">
-        <div className="cc-card ai-overview glass-panel">
-          <div className="card-header">
-            <span className="icon-badge badge-cyan">
-              <Monitor size={15} />
-            </span>
-            <h3>DESKTOP HUB</h3>
-            <button
-              type="button"
-              className="desktop-refresh-btn"
-              title="Refresh"
-              onClick={() => refreshDesktop()}
-              disabled={desktopLoading}
-            >
-              <RefreshCw size={13} className={desktopLoading ? "spin" : ""} />
-            </button>
-          </div>
+      <div className="cc-card ai-overview glass-panel cc-hub">
+        <div className="card-header">
+          <span className="icon-badge badge-cyan">
+            <Monitor size={15} />
+          </span>
+          <h3>DESKTOP HUB</h3>
+          <button
+            type="button"
+            className="desktop-refresh-btn"
+            title="Refresh"
+            onClick={() => refreshDesktop()}
+            disabled={desktopLoading}
+          >
+            <RefreshCw size={13} className={desktopLoading ? "spin" : ""} />
+          </button>
+        </div>
 
-          <div className="overview-split">
-            <div className="places-panel">
-              <div className="places-label">Places</div>
-              <div className="places-list">
-                {places.map((p) => (
-                  <HubTile
-                    key={p.placeId || p.path}
-                    item={p}
-                    layout="place"
-                    customIcon={customIcons[p.path]}
-                    onOpen={() => openItem(p)}
-                    onIconChange={(url) => setIconFor(p.path, url)}
-                    onIconClear={() => clearIconFor(p.path)}
-                  />
-                ))}
+        <div className={splitClass}>
+          {showPlaces && (
+            <div className={`places-panel ${placesCollapsed ? "collapsed" : ""}`}>
+              {/* Arrow always on border center */}
+              <div className="places-panel-header">
+                <button
+                  type="button"
+                  className="places-collapse-btn"
+                  title={placesCollapsed ? "Show Places" : "Hide Places"}
+                  onClick={() => setPlacesCollapsed((v) => !v)}
+                >
+                  {placesCollapsed ? (
+                    <ChevronRight size={14} />
+                  ) : (
+                    <ChevronLeft size={14} />
+                  )}
+                </button>
               </div>
-            </div>
 
+              {!placesCollapsed && (
+                <>
+                  <div className="places-section-title">Places</div>
+                  <div className="places-list">
+                    {places.map((p) => (
+                      <HubTile
+                        key={p.placeId || p.path}
+                        item={p}
+                        layout="place"
+                        placesIconSize={hubSettings.placesIconSize}
+                        desktopTextSize={hubSettings.desktopTextSize}
+                        desktopIconSize={hubSettings.desktopIconSize}
+                        customIcon={customIcons[p.path]}
+                        onOpen={() => openItem(p)}
+                        onIconChange={(url) => setIconFor(p.path, url)}
+                        onIconClear={() => clearIconFor(p.path)}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {showDesktop && (
             <div className="apps-panel">
               <div className="places-label">Desktop</div>
-              <div className="apps-grid-3">
+              <div
+                className={`apps-grid-3 ${hubSettings.appsLayout === "list" ? "apps-list" : ""}`}
+                style={gridStyle}
+              >
                 {desktopLoading && desktopItems.length === 0 && (
                   <div className="tile-empty">Scanning…</div>
                 )}
@@ -530,6 +715,9 @@ export default function CommandCenter({ messages, voice: _voice }: CommandCenter
                     key={item.path}
                     item={item}
                     layout="desktop"
+                    placesIconSize={hubSettings.placesIconSize}
+                    desktopTextSize={hubSettings.desktopTextSize}
+                    desktopIconSize={hubSettings.desktopIconSize}
                     customIcon={customIcons[item.path]}
                     onOpen={() => openItem(item)}
                     onIconChange={(url) => setIconFor(item.path, url)}
@@ -544,12 +732,18 @@ export default function CommandCenter({ messages, voice: _voice }: CommandCenter
                     onClick={() =>
                       openDrawer(
                         "Desktop",
-                        <div className="apps-grid-3 drawer-grid">
+                        <div
+                          className={`apps-grid-3 drawer-grid ${hubSettings.appsLayout === "list" ? "apps-list" : ""}`}
+                          style={gridStyle}
+                        >
                           {desktopItems.map((item) => (
                             <HubTile
                               key={item.path}
                               item={item}
                               layout="desktop"
+                              placesIconSize={hubSettings.placesIconSize}
+                              desktopTextSize={hubSettings.desktopTextSize}
+                              desktopIconSize={hubSettings.desktopIconSize}
                               customIcon={customIcons[item.path]}
                               onOpen={() => openItem(item)}
                               onIconChange={(url) => setIconFor(item.path, url)}
@@ -563,14 +757,21 @@ export default function CommandCenter({ messages, voice: _voice }: CommandCenter
                     <span className="tile-icon more-count">
                       +{desktopItems.length - 12}
                     </span>
-                    <span className="tile-name">More</span>
+                    <span
+                      className="tile-name"
+                      style={{ fontSize: hubSettings.desktopTextSize }}
+                    >
+                      More
+                    </span>
                   </button>
                 )}
               </div>
             </div>
-          </div>
+          )}
         </div>
+      </div>
 
+      <div className="cc-center">
         <div className="cc-card orb-card">
           <div className="globe-wrap video-mode">
             <video
@@ -589,6 +790,13 @@ export default function CommandCenter({ messages, voice: _voice }: CommandCenter
           {lastReply && <p className="last-reply">"{lastReply.text}"</p>}
         </div>
 
+        <button type="button" className="cc-talk-bar" onClick={handleTalkToVSmart}>
+          <MessageSquare size={16} />
+          Talk to VSmart
+        </button>
+      </div>
+
+      <div className="cc-right">
         <div className="cc-card intel-feed">
           <div className="card-header">
             <span className="icon-badge badge-purple">
@@ -651,6 +859,13 @@ export default function CommandCenter({ messages, voice: _voice }: CommandCenter
               </div>
             </div>
           ))}
+        </div>
+
+        <div className="cc-card cc-not-decided">
+          <div className="card-header">
+            <h3>NOT DECIDED</h3>
+          </div>
+          <p className="feed-loading">Coming soon…</p>
         </div>
       </div>
 
