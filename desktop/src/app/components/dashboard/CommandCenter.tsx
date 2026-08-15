@@ -1,5 +1,5 @@
 import "./CommandCenter.css";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import type { Message } from "../layout/MainLayout";
 import type { VoiceControls } from "../../voice/useVoice";
 import heartVideo from "../../../assets/vsmart-ai-videos/vsmart-heart.mp4";
@@ -9,9 +9,6 @@ import {
   Info,
   TrendingUp,
   TrendingDown,
-  Folder,
-  File,
-  AppWindow,
   RefreshCw,
   Monitor,
   Home,
@@ -20,7 +17,16 @@ import {
   Image,
   Music,
   Video,
-  HardDrive
+  HardDrive,
+  Folder,
+  AppWindow,
+  File,
+  FileCode,
+  FileType,
+  Lock,
+  Film,
+  Package,
+  X
 } from "lucide-react";
 
 interface CommandCenterProps {
@@ -39,37 +45,125 @@ interface DesktopItem {
   placeId?: string;
 }
 
-/** Start-menu style tile icon — no purple link glyph. */
-function tileIcon(item: DesktopItem) {
+const CUSTOM_ICONS_KEY = "vsmart_hub_custom_icons";
+
+function loadCustomIcons(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(CUSTOM_ICONS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveCustomIcons(map: Record<string, string>) {
+  try {
+    localStorage.setItem(CUSTOM_ICONS_KEY, JSON.stringify(map));
+  } catch {
+    /* ignore */
+  }
+}
+
+function DefaultIcon({ item, size = 22 }: { item: DesktopItem; size?: number }) {
+  const name = (item.displayName || item.name || "").toLowerCase();
+  const ext = (item.extension || "").toLowerCase().replace(".", "");
+
+  // ----- Places -----
   if (item.type === "place") {
     switch (item.placeId) {
       case "home":
-        return <Home size={22} />;
+        return <Home size={size} />;
       case "documents":
-        return <FileText size={22} />;
+        return <FileText size={size} />;
       case "downloads":
-        return <Download size={22} />;
+        return <Download size={size} />;
       case "pictures":
-        return <Image size={22} />;
+        return <Image size={size} />;
       case "music":
-        return <Music size={22} />;
+        return <Music size={size} />;
       case "videos":
-        return <Video size={22} />;
+        return <Video size={size} />;
       case "desktop":
-        return <HardDrive size={22} />;
+        return <HardDrive size={size} />;
       default:
-        return <Folder size={22} />;
+        return <Folder size={size} />;
     }
   }
-  switch (item.type) {
-    case "folder":
-      return <Folder size={22} />;
-    case "app":
-    case "shortcut":
-      return <AppWindow size={22} />;
-    default:
-      return <File size={22} />;
+
+  // ----- Folders (by name) -----
+  if (item.type === "folder") {
+    if (name.includes("document")) return <FileText size={size} />;
+    if (name.includes("download")) return <Download size={size} />;
+    if (name.includes("video")) return <Video size={size} />;
+    if (name.includes("picture") || name.includes("image") || name.includes("photo"))
+      return <Image size={size} />;
+    if (name.includes("music") || name.includes("audio")) return <Music size={size} />;
+    if (name.includes("app") || name.includes("program")) return <AppWindow size={size} />;
+    if (name.includes("secure") || name.includes("lock") || name.includes("private"))
+      return <Lock size={size} />;
+    return <Folder size={size} />;
   }
+
+  // ----- Apps / shortcuts — name keywords (Windows .lnk sab "shortcut" hote hain) -----
+  if (item.type === "app" || item.type === "shortcut") {
+    // Design
+    if (name.includes("illustrator") || name.includes("photoshop") || name.includes("figma") || name.includes("canva"))
+      return <Image size={size} />;
+    // Office docs
+    if (name.includes("word") || name.includes("writer") || name.includes("document"))
+      return <FileText size={size} />;
+    if (name.includes("excel") || name.includes("calc") || name.includes("sheet"))
+      return <FileCode size={size} />;
+    if (name.includes("powerpoint") || name.includes("slide") || name.includes("impress"))
+      return <Package size={size} />;
+    // PDF
+    if (name.includes("pdf") || name.includes("acrobat") || name.includes("reader"))
+      return <FileType size={size} />;
+    // Mail
+    if (name.includes("mail") || name.includes("outlook") || name.includes("thunderbird"))
+      return <FileText size={size} />;
+    // Browser
+    if (name.includes("chrome") || name.includes("firefox") || name.includes("edge") || name.includes("brave"))
+      return <AppWindow size={size} />;
+    // Media
+    if (name.includes("vlc") || name.includes("player") || name.includes("spotify") || name.includes("music"))
+      return <Music size={size} />;
+    if (name.includes("video") || name.includes("movie") || name.includes("film"))
+      return <Film size={size} />;
+    // Code / IDE
+    if (
+      name.includes("code") ||
+      name.includes("studio") ||
+      name.includes("cursor") ||
+      name.includes("sublime") ||
+      name.includes("atom") ||
+      name.includes("notepad")
+    )
+      return <FileCode size={size} />;
+    // Launcher / system
+    if (name.includes("launcher") || name.includes("start") || name.includes("manager"))
+      return <Package size={size} />;
+    // Security
+    if (name.includes("lock") || name.includes("secure") || name.includes("vpn") || name.includes("antivirus"))
+      return <Lock size={size} />;
+    // Default app
+    return <AppWindow size={size} />;
+  }
+
+  // ----- Files by extension -----
+  if (["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "ico"].includes(ext))
+    return <Image size={size} />;
+  if (["mp4", "mkv", "avi", "mov", "wmv", "webm"].includes(ext)) return <Film size={size} />;
+  if (["mp3", "wav", "flac", "aac", "ogg"].includes(ext)) return <Music size={size} />;
+  if (ext === "pdf") return <FileType size={size} />;
+  if (["lock", "key", "pem", "crt", "cer", "p12"].includes(ext)) return <Lock size={size} />;
+  if (["js", "ts", "tsx", "jsx", "py", "java", "c", "cpp", "html", "css", "json", "xml"].includes(ext))
+    return <FileCode size={size} />;
+  if (["txt", "md", "log", "csv", "doc", "docx"].includes(ext)) return <FileText size={size} />;
+  if (["msi", "msix", "appx", "dmg", "pkg", "deb", "rpm", "apk", "exe", "bat", "cmd"].includes(ext))
+    return <Package size={size} />;
+
+  return <File size={size} />;
 }
 
 function placeColor(placeId?: string): string {
@@ -93,7 +187,13 @@ function placeColor(placeId?: string): string {
   }
 }
 
-/** Loads Desktop items + system places only while Command Center is mounted. */
+function typeClass(item: DesktopItem): string {
+  if (item.type === "place") return placeColor(item.placeId);
+  if (item.type === "folder") return "tile-folder";
+  if (item.type === "app" || item.type === "shortcut") return "tile-app";
+  return "tile-file";
+}
+
 function useDesktopItems() {
   const [items, setItems] = useState<DesktopItem[]>([]);
   const [places, setPlaces] = useState<DesktopItem[]>([]);
@@ -119,7 +219,6 @@ function useDesktopItems() {
 
   useEffect(() => {
     let cancelled = false;
-
     (async () => {
       try {
         const [desk, sysPlaces] = await Promise.all([
@@ -167,7 +266,6 @@ function useMarketFeed() {
 
   useEffect(() => {
     let cancelled = false;
-
     const load = async () => {
       try {
         const data = await window.vsmart.getMarketFeed();
@@ -182,10 +280,8 @@ function useMarketFeed() {
         if (!cancelled) setLoading(false);
       }
     };
-
     load();
     const interval = setInterval(load, 60000);
-
     return () => {
       cancelled = true;
       clearInterval(interval);
@@ -195,8 +291,137 @@ function useMarketFeed() {
   return { feed, loading, error, lastUpdated };
 }
 
+/**
+ * Left click  → open
+ * Right click → edit icon only (no open)
+ */
+function HubTile({
+  item,
+  customIcon,
+  layout,
+  onOpen,
+  onIconChange,
+  onIconClear
+}: {
+  item: DesktopItem;
+  customIcon?: string;
+  layout: "place" | "desktop";
+  onOpen: () => void;
+  onIconChange: (dataUrl: string) => void;
+  onIconClear: () => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const iconSize = layout === "place" ? 16 : 22;
+
+  const openEditPicker = () => {
+    fileRef.current?.click();
+  };
+
+  const onFilePicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") onIconChange(reader.result);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const iconNode = customIcon ? (
+    <img src={customIcon} alt="" className="tile-custom-img" draggable={false} />
+  ) : (
+    <DefaultIcon item={item} size={iconSize} />
+  );
+
+  const hiddenInput = (
+    <input
+      ref={fileRef}
+      type="file"
+      accept="image/*"
+      className="hub-file-input"
+      onChange={onFilePicked}
+    />
+  );
+
+  if (layout === "place") {
+    return (
+      <div className="hub-place-wrap">
+        <button
+          type="button"
+          className={`place-row ${typeClass(item)}`}
+          title={`${item.displayName}\nLeft click: open · Right click: change icon`}
+          onClick={(e) => {
+            e.preventDefault();
+            onOpen();
+          }}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openEditPicker();
+          }}
+        >
+          <span className="place-icon">{iconNode}</span>
+          <span className="place-name">{item.displayName}</span>
+          {customIcon && (
+            <span
+              className="tile-reset-inline"
+              title="Reset default icon"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onIconClear();
+              }}
+            >
+              <X size={12} />
+            </span>
+          )}
+        </button>
+        {hiddenInput}
+      </div>
+    );
+  }
+
+  return (
+    <div className="hub-desktop-wrap">
+      <button
+        type="button"
+        className={`icon-tile ${typeClass(item)}`}
+        title={`${item.displayName}\nLeft click: open · Right click: change icon`}
+        onClick={(e) => {
+          e.preventDefault();
+          onOpen();
+        }}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          openEditPicker();
+        }}
+      >
+        <span className="tile-icon">{iconNode}</span>
+        <span className="tile-name">{item.displayName}</span>
+        {customIcon && (
+          <span
+            className="tile-reset-float"
+            title="Reset default icon"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onIconClear();
+            }}
+          >
+            <X size={11} />
+          </span>
+        )}
+      </button>
+      {hiddenInput}
+    </div>
+  );
+}
+
 export default function CommandCenter({ messages, voice: _voice }: CommandCenterProps) {
-  const { feed: marketFeed, loading: marketLoading, error: marketError, lastUpdated } = useMarketFeed();
+  const { feed: marketFeed, loading: marketLoading, error: marketError, lastUpdated } =
+    useMarketFeed();
   const {
     items: desktopItems,
     places,
@@ -206,30 +431,43 @@ export default function CommandCenter({ messages, voice: _voice }: CommandCenter
   } = useDesktopItems();
   const lastReply = [...messages].reverse().find((m) => m.sender === "VSmart");
 
+  const [customIcons, setCustomIcons] = useState<Record<string, string>>(() =>
+    loadCustomIcons()
+  );
+
   const [drawer, setDrawer] = useState<{
     open: boolean;
     title: string;
     content: React.ReactNode;
-  }>({
-    open: false,
-    title: "",
-    content: null,
-  });
+  }>({ open: false, title: "", content: null });
 
-  const openDrawer = (title: string, content: React.ReactNode) => {
+  const openDrawer = (title: string, content: React.ReactNode) =>
     setDrawer({ open: true, title, content });
-  };
+  const closeDrawer = () => setDrawer((p) => ({ ...p, open: false }));
 
-  const closeDrawer = () => {
-    setDrawer((prev) => ({ ...prev, open: false }));
-  };
-
-  const openDesktopItem = async (item: DesktopItem) => {
+  const openItem = async (item: DesktopItem) => {
     try {
       await window.vsmart.system.openDesktopItem(item.path);
     } catch {
       /* ignore */
     }
+  };
+
+  const setIconFor = (path: string, dataUrl: string) => {
+    setCustomIcons((prev) => {
+      const next = { ...prev, [path]: dataUrl };
+      saveCustomIcons(next);
+      return next;
+    });
+  };
+
+  const clearIconFor = (path: string) => {
+    setCustomIcons((prev) => {
+      const next = { ...prev };
+      delete next[path];
+      saveCustomIcons(next);
+      return next;
+    });
   };
 
   const secondsAgo = lastUpdated
@@ -238,16 +476,15 @@ export default function CommandCenter({ messages, voice: _voice }: CommandCenter
 
   return (
     <div className="command-center">
-      {/* Row 1 */}
       <div className="cc-row cc-row-top">
-        {/* AI Core Overview — left places list + right apps (3 per row) */}
-        <div className="cc-card ai-overview">
+        <div className="cc-card ai-overview glass-panel">
           <div className="card-header">
             <span className="icon-badge badge-cyan">
               <Monitor size={15} />
             </span>
-            <h3>AI CORE OVERVIEW</h3>
+            <h3>DESKTOP HUB</h3>
             <button
+              type="button"
               className="desktop-refresh-btn"
               title="Refresh"
               onClick={() => refreshDesktop()}
@@ -258,25 +495,23 @@ export default function CommandCenter({ messages, voice: _voice }: CommandCenter
           </div>
 
           <div className="overview-split">
-            {/* LEFT — Places list (icon + name) */}
             <div className="places-panel">
               <div className="places-label">Places</div>
               <div className="places-list">
                 {places.map((p) => (
-                  <button
+                  <HubTile
                     key={p.placeId || p.path}
-                    className={`place-row ${placeColor(p.placeId)}`}
-                    title={p.path}
-                    onClick={() => openDesktopItem(p)}
-                  >
-                    <span className="place-icon">{tileIcon(p)}</span>
-                    <span className="place-name">{p.displayName}</span>
-                  </button>
+                    item={p}
+                    layout="place"
+                    customIcon={customIcons[p.path]}
+                    onOpen={() => openItem(p)}
+                    onIconChange={(url) => setIconFor(p.path, url)}
+                    onIconClear={() => clearIconFor(p.path)}
+                  />
                 ))}
               </div>
             </div>
 
-            {/* RIGHT — Desktop apps, 3 per row, icon above name */}
             <div className="apps-panel">
               <div className="places-label">Desktop</div>
               <div className="apps-grid-3">
@@ -290,52 +525,44 @@ export default function CommandCenter({ messages, voice: _voice }: CommandCenter
                   <div className="tile-empty">Desktop is empty</div>
                 )}
 
-                {desktopItems.slice(0, 15).map((item) => (
-                  <button
+                {desktopItems.slice(0, 12).map((item) => (
+                  <HubTile
                     key={item.path}
-                    className={`icon-tile ${
-                      item.type === "folder"
-                        ? "tile-folder"
-                        : item.type === "app" || item.type === "shortcut"
-                          ? "tile-app"
-                          : "tile-file"
-                    }`}
-                    title={item.name}
-                    onClick={() => openDesktopItem(item)}
-                  >
-                    <span className="tile-icon">{tileIcon(item)}</span>
-                    <span className="tile-name">{item.displayName}</span>
-                  </button>
+                    item={item}
+                    layout="desktop"
+                    customIcon={customIcons[item.path]}
+                    onOpen={() => openItem(item)}
+                    onIconChange={(url) => setIconFor(item.path, url)}
+                    onIconClear={() => clearIconFor(item.path)}
+                  />
                 ))}
 
-                {desktopItems.length > 15 && (
+                {desktopItems.length > 12 && (
                   <button
+                    type="button"
                     className="icon-tile tile-more"
                     onClick={() =>
-                      openDrawer("Desktop", (
+                      openDrawer(
+                        "Desktop",
                         <div className="apps-grid-3 drawer-grid">
                           {desktopItems.map((item) => (
-                            <button
+                            <HubTile
                               key={item.path}
-                              className={`icon-tile ${
-                                item.type === "folder"
-                                  ? "tile-folder"
-                                  : item.type === "app" || item.type === "shortcut"
-                                    ? "tile-app"
-                                    : "tile-file"
-                              }`}
-                              title={item.name}
-                              onClick={() => openDesktopItem(item)}
-                            >
-                              <span className="tile-icon">{tileIcon(item)}</span>
-                              <span className="tile-name">{item.displayName}</span>
-                            </button>
+                              item={item}
+                              layout="desktop"
+                              customIcon={customIcons[item.path]}
+                              onOpen={() => openItem(item)}
+                              onIconChange={(url) => setIconFor(item.path, url)}
+                              onIconClear={() => clearIconFor(item.path)}
+                            />
                           ))}
                         </div>
-                      ))
+                      )
                     }
                   >
-                    <span className="tile-icon more-count">+{desktopItems.length - 15}</span>
+                    <span className="tile-icon more-count">
+                      +{desktopItems.length - 12}
+                    </span>
                     <span className="tile-name">More</span>
                   </button>
                 )}
@@ -344,7 +571,6 @@ export default function CommandCenter({ messages, voice: _voice }: CommandCenter
           </div>
         </div>
 
-        {/* Orb */}
         <div className="cc-card orb-card">
           <div className="globe-wrap video-mode">
             <video
@@ -363,7 +589,6 @@ export default function CommandCenter({ messages, voice: _voice }: CommandCenter
           {lastReply && <p className="last-reply">"{lastReply.text}"</p>}
         </div>
 
-        {/* Live Intelligence Feed */}
         <div className="cc-card intel-feed">
           <div className="card-header">
             <span className="icon-badge badge-purple">
@@ -376,15 +601,15 @@ export default function CommandCenter({ messages, voice: _voice }: CommandCenter
           {secondsAgo !== null && (
             <p className="feed-updated">Updated {secondsAgo}s ago</p>
           )}
-
           {marketLoading && marketFeed.length === 0 && (
             <p className="feed-loading">Loading market data...</p>
           )}
-
           {marketError && marketFeed.length === 0 && (
             <div className="feed-error">
               <p>Failed to load market data</p>
-              <button onClick={() => window.location.reload()}>Retry</button>
+              <button type="button" onClick={() => window.location.reload()}>
+                Retry
+              </button>
             </div>
           )}
 
@@ -393,20 +618,21 @@ export default function CommandCenter({ messages, voice: _voice }: CommandCenter
               className="feed-item clickable"
               key={item.symbol}
               onClick={() =>
-                openDrawer(item.label, (
+                openDrawer(
+                  item.label,
                   <div>
-                    <p><strong>Symbol:</strong> {item.symbol}</p>
-                    <p><strong>Price:</strong> {item.price}</p>
                     <p>
-                      <strong>Change:</strong>{" "}
-                      {item.up ? "+" : ""}
+                      <strong>Symbol:</strong> {item.symbol}
+                    </p>
+                    <p>
+                      <strong>Price:</strong> {item.price}
+                    </p>
+                    <p>
+                      <strong>Change:</strong> {item.up ? "+" : ""}
                       {item.changePercent}%
                     </p>
-                    <p style={{ marginTop: 12, opacity: 0.7 }}>
-                      Detailed chart and historical data will appear here.
-                    </p>
                   </div>
-                ))
+                )
               }
             >
               {item.up ? (
@@ -428,7 +654,6 @@ export default function CommandCenter({ messages, voice: _voice }: CommandCenter
         </div>
       </div>
 
-      {/* Detail Drawer */}
       <DetailDrawer open={drawer.open} title={drawer.title} onClose={closeDrawer}>
         {drawer.content}
       </DetailDrawer>
