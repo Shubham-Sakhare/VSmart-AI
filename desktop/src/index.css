@@ -1,13 +1,6 @@
-:root {
-  --bg-deep: #030509;
-  --accent-cyan: #00e5ff;
-  --accent-purple: #a855f7;
-  --accent-pink: #ff2e9a;
-  --gradient-primary: linear-gradient(90deg, #00e5ff, #a855f7);
-  --gradient-hero: linear-gradient(90deg, #ffffff, #00e5ff 45%, #a855f7 75%, #ff2e9a);
-  --glow-cyan: 0 0 24px rgba(0, 229, 255, 0.35);
-  --glow-purple: 0 0 24px rgba(168, 85, 247, 0.35);
+@import "./app/styles/theme.css";
 
+:root {
   --sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
   --heading: 'Orbitron', var(--sans);
 
@@ -67,7 +60,7 @@ code {
   height: 8px;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 229, 255, 0.3);
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
   border-radius: 20px;
 }
 ::-webkit-scrollbar-track {

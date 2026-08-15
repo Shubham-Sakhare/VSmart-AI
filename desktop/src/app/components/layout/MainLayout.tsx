@@ -68,9 +68,11 @@ function ComingSoon({ label }: { label: string }) {
 }
 
 function makeTitle(messages: Message[]): string {
-  const firstUserMsg = messages.find(m => m.sender === "You");
+  const firstUserMsg = messages.find((m) => m.sender === "You");
   if (!firstUserMsg) return "New Chat";
-  return firstUserMsg.text.length > 32 ? firstUserMsg.text.slice(0, 32) + "…" : firstUserMsg.text;
+  return firstUserMsg.text.length > 32
+    ? firstUserMsg.text.slice(0, 32) + "…"
+    : firstUserMsg.text;
 }
 
 export default function MainLayout() {
@@ -101,18 +103,12 @@ export default function MainLayout() {
     })();
   }, []);
 
-  const updateSidebarSettings = async (
-    enabled: boolean,
-    items: SidebarItem[]
-  ) => {
+  const updateSidebarSettings = async (enabled: boolean, items: SidebarItem[]) => {
     setSidebarEnabled(enabled);
     setSidebarItems(items);
     await window.vsmart.saveMemory(
       SIDEBAR_KEY,
-      JSON.stringify({
-        enabled,
-        items
-      })
+      JSON.stringify({ enabled, items })
     );
   };
 
@@ -136,13 +132,22 @@ export default function MainLayout() {
 
   useEffect(() => {
     if (!conversationsLoaded) return;
-    window.vsmart.saveMemory(
-      CONVERSATIONS_KEY,
-      JSON.stringify(conversations)
-    ).catch(() => {});
+    window.vsmart
+      .saveMemory(CONVERSATIONS_KEY, JSON.stringify(conversations))
+      .catch(() => {});
   }, [conversations, conversationsLoaded]);
 
-    const activeConversation = conversations.find(c => c.id === activeConversationId) ?? null;
+  useEffect(() => {
+    const open = () => {
+      setChatOpen(true);
+      setChatMinimized(false);
+    };
+    window.addEventListener("vsmart-open-chat", open);
+    return () => window.removeEventListener("vsmart-open-chat", open);
+  }, []);
+
+  const activeConversation =
+    conversations.find((c) => c.id === activeConversationId) ?? null;
   const messages = activeConversation?.messages ?? [];
 
   const newChat = () => {
@@ -152,7 +157,7 @@ export default function MainLayout() {
       messages: [],
       updatedAt: Date.now()
     };
-    setConversations(prev => [conv, ...prev]);
+    setConversations((prev) => [conv, ...prev]);
     setActiveConversationId(conv.id);
     setChatOpen(true);
     setChatMinimized(false);
@@ -165,8 +170,8 @@ export default function MainLayout() {
   };
 
   const deleteConversation = (id: string) => {
-    setConversations(prev => {
-      const next = prev.filter(c => c.id !== id);
+    setConversations((prev) => {
+      const next = prev.filter((c) => c.id !== id);
       if (activeConversationId === id) {
         setActiveConversationId(next[0]?.id ?? null);
       }
@@ -175,8 +180,8 @@ export default function MainLayout() {
   };
 
   const deleteConversations = (ids: string[]) => {
-    setConversations(prev => {
-      const next = prev.filter(c => !ids.includes(c.id));
+    setConversations((prev) => {
+      const next = prev.filter((c) => !ids.includes(c.id));
       if (activeConversationId && ids.includes(activeConversationId)) {
         setActiveConversationId(next[0]?.id ?? null);
       }
@@ -198,46 +203,38 @@ export default function MainLayout() {
         messages: [],
         updatedAt: Date.now()
       };
-      setConversations(prev => [conv, ...prev]);
+      setConversations((prev) => [conv, ...prev]);
       convId = conv.id;
       setActiveConversationId(convId);
     }
 
-    setConversations(prev => prev.map(c => {
-      if (c.id !== convId) return c;
-      const updatedMsgs = [
-        ...c.messages,
-        {
-          sender: "You" as const,
-          text
-        }
-      ];
-      return {
-        ...c,
-        messages: updatedMsgs,
-        title: c.title === "New Chat" ? makeTitle(updatedMsgs) : c.title,
-        updatedAt: Date.now()
-      };
-    }));
+    setConversations((prev) =>
+      prev.map((c) => {
+        if (c.id !== convId) return c;
+        const updatedMsgs = [...c.messages, { sender: "You" as const, text }];
+        return {
+          ...c,
+          messages: updatedMsgs,
+          title: c.title === "New Chat" ? makeTitle(updatedMsgs) : c.title,
+          updatedAt: Date.now()
+        };
+      })
+    );
 
     const result = await askVSmart(text, replyLang);
     const reply = result.message ?? "Done.";
 
-    setConversations(prev => prev.map(c =>
-      c.id === convId
-        ? {
-            ...c,
-            messages: [
-              ...c.messages,
-              {
-                sender: "VSmart" as const,
-                text: reply
-              }
-            ],
-            updatedAt: Date.now()
-          }
-        : c
-    ));
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === convId
+          ? {
+              ...c,
+              messages: [...c.messages, { sender: "VSmart" as const, text: reply }],
+              updatedAt: Date.now()
+            }
+          : c
+      )
+    );
 
     if (result.action !== "chat") {
       speak(reply, replyLang === "hi" ? "hi-IN" : "en-IN");
@@ -253,7 +250,7 @@ export default function MainLayout() {
     if (page === "conversations") {
       setChatOpen(true);
       setChatMinimized(false);
-      setHistoryTrigger(t => t + 1);
+      setHistoryTrigger((t) => t + 1);
       return;
     }
     setActivePage(page);
@@ -262,7 +259,16 @@ export default function MainLayout() {
   const renderPage = () => {
     switch (activePage) {
       case "dashboard":
-        return <CommandCenter messages={messages} voice={voice} />;
+        return (
+          <CommandCenter
+            messages={messages}
+            voice={voice}
+            onOpenChat={() => {
+              setChatOpen(true);
+              setChatMinimized(false);
+            }}
+          />
+        );
       case "aicore":
         return <ComingSoon label="AI Core" />;
       case "agents":
@@ -280,7 +286,16 @@ export default function MainLayout() {
       case "workflows":
         return <ComingSoon label="Workflows" />;
       default:
-        return <CommandCenter messages={messages} voice={voice} />;
+        return (
+          <CommandCenter
+            messages={messages}
+            voice={voice}
+            onOpenChat={() => {
+              setChatOpen(true);
+              setChatMinimized(false);
+            }}
+          />
+        );
     }
   };
 
@@ -297,19 +312,13 @@ export default function MainLayout() {
 
         <main className="main-content">
           <Topbar onOpenSettings={() => setSettingsOpen(true)} />
-          <section className="page-content">
-            {renderPage()}
-          </section>
+          <section className="page-content">{renderPage()}</section>
         </main>
       </div>
 
       <BottomBar voice={voice} />
 
-      <TaskBar
-        activePage={activePage}
-        onNavigate={handleNavigate}
-        voice={voice}
-      />
+      <TaskBar activePage={activePage} onNavigate={handleNavigate} voice={voice} />
 
       <ChatWidget
         open={chatOpen}
@@ -319,7 +328,7 @@ export default function MainLayout() {
         voice={voice}
         replyLang={replyLang}
         onLangChange={setReplyLang}
-        onMinimizeToggle={() => setChatMinimized(prev => !prev)}
+        onMinimizeToggle={() => setChatMinimized((prev) => !prev)}
         onClose={() => setChatOpen(false)}
         conversations={conversations}
         activeConversationId={activeConversationId}

@@ -4,6 +4,7 @@ import '@fontsource/inter/600.css'
 import '@fontsource/orbitron/600.css'
 import '@fontsource/orbitron/800.css'
 import './index.css'
+import './app/hooks/useTheme' 
 import App from './app/App.tsx'
 
 createRoot(document.getElementById('root')!).render(

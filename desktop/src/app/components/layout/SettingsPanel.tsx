@@ -4,6 +4,7 @@ import { setPreferredVoice, getPreferredVoice } from "../../voice/useVoice";
 import type { ReplyLang } from "../../../llm/openrouter";
 import type { Page } from "./MainLayout";
 import { invalidateApiKeyCache } from "../../../llm/openrouter";
+import { useTheme } from "../../hooks/useTheme";
 import {
   LAUNCHER_CATALOG,
   LAUNCHER_APPS_KEY,
@@ -69,6 +70,10 @@ export default function SettingsPanel({
   const [selectedPages, setSelectedPages] = useState<Set<Page>>(new Set());
   const [addingPages, setAddingPages] = useState(false);
   const [pagesJustAdded, setPagesJustAdded] = useState(false);
+
+  // Theme
+  const { theme, setTheme, themes } = useTheme();
+  const [themeOpen, setThemeOpen] = useState(false);
 
   // Taskbar settings
   const [taskbarOpen, setTaskbarOpen] = useState(false);
@@ -233,6 +238,7 @@ const handleSaveApiKey = async () => {
   setSavingKey(true);
   try {
     await window.vsmart.apiKey.save(apiKeyInput.trim());
+    invalidateApiKeyCache();
     setHasKey(true);
     setApiKeyInput("");
     setKeySaved(true);
@@ -241,13 +247,12 @@ const handleSaveApiKey = async () => {
     setSavingKey(false);
   }
 };
-invalidateApiKeyCache();
 
 const handleClearApiKey = async () => {
   await window.vsmart.apiKey.clear();
+  invalidateApiKeyCache();
   setHasKey(false);
 };
-invalidateApiKeyCache();
   return (
     <div className="settings-overlay" onClick={onClose}>
       <div className="settings-panel" onClick={(e) => e.stopPropagation()}>
@@ -490,6 +495,43 @@ invalidateApiKeyCache();
                           : "Add"}
                   </button>
                 )}
+              </div>
+            )}
+          </div>
+
+          {/* ===== Theme ===== */}
+          <div className="sidebar-settings-box">
+            <button
+              className="sidebar-dropdown"
+              onClick={() => setThemeOpen(!themeOpen)}
+            >
+              <span>Theme</span>
+              <ChevronDown size={16} className={themeOpen ? "rotate" : ""} />
+            </button>
+
+            {themeOpen && (
+              <div className="sidebar-dropdown-content">
+                <div className="theme-grid">
+                  {themes.map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      className={theme === t.id ? "theme-swatch active" : "theme-swatch"}
+                      onClick={() => setTheme(t.id)}
+                      title={t.label}
+                    >
+                      <span
+                        className="theme-swatch-preview"
+                        style={{
+                          background: `linear-gradient(135deg, ${t.swatch[0]}, ${t.swatch[1]}, ${t.swatch[2]})`
+                        }}
+                      >
+                        {theme === t.id && <Check size={13} />}
+                      </span>
+                      <span className="theme-swatch-name">{t.label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
