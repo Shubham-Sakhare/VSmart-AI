@@ -19,6 +19,7 @@
     border-bottom:1px solid rgba(0,255,255,.12);
 }
 
+
 .topbar-left{
 
 display:flex;
@@ -118,7 +119,6 @@ background:#00ff80;
 animation:onlinePulse 1.6s infinite;
 
 }
-
 @keyframes onlinePulse{
 
 0%{
@@ -146,7 +146,6 @@ box-shadow:0 0 8px #00ff80;
 }
 
 }
-
 .topbar-right{
 
 display:flex;
@@ -155,6 +154,54 @@ align-items:center;
 
 gap:15px;
 
+}
+
+
+/* Compact CPU / RAM / DISK next to notification */
+.top-sys-metrics{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:4px 10px;
+  border-radius:12px;
+  background:rgba(13,32,53,.7);
+  border:1px solid rgba(0,229,255,.15);
+}
+
+.top-metric{
+  display:flex;
+  align-items:center;
+  gap:5px;
+  min-width:0;
+}
+
+.top-metric-label{
+  font-size:9px;
+  letter-spacing:0.8px;
+  color:#7fb8cc;
+  flex-shrink:0;
+}
+
+.top-metric-track{
+  width:36px;
+  height:3px;
+  border-radius:3px;
+  background:rgba(255,255,255,.1);
+  overflow:hidden;
+  flex-shrink:0;
+}
+
+.top-metric-fill{
+  height:100%;
+  border-radius:3px;
+  transition:width .5s ease;
+}
+
+.top-metric-val{
+  font-size:10px;
+  font-weight:600;
+  min-width:28px;
+  text-align:right;
 }
 
 .icon-btn{
@@ -226,21 +273,39 @@ letter-spacing:1px;
 }
 
 .profile-block{
+    display:flex;
+    align-items:center;
+    gap:8px;
+}
 
-display:flex;
+.profile-trigger{
+    border:none;
+    background:transparent;
+    cursor:pointer;
+    padding:4px 6px;
+    border-radius:12px;
+    transition:background .2s;
+}
 
-align-items:center;
+.profile-trigger:hover{
+    background:rgba(0,229,255,.08);
+}
 
-gap:8px;
-
+.profile-avatar{
+    width:34px;
+    height:34px;
+    border-radius:50%;
+    object-fit:cover;
+    border:1px solid rgba(0,229,255,.35);
 }
 
 .profile-label{
-
-font-size:12px;
-
-color:#8fdfff;
-
+    font-size:12px;
+    color:#8fdfff;
+    max-width:100px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
 }
 
 .clock{

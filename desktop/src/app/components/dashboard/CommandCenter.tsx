@@ -1,14 +1,11 @@
 import "./CommandCenter.css";
 import { useEffect, useState, useCallback } from "react";
-import { useSystem } from "../../hooks/useSystem";
 import type { Message } from "../layout/MainLayout";
 import type { VoiceControls } from "../../voice/useVoice";
 import heartVideo from "../../../assets/vsmart-ai-videos/vsmart-heart.mp4";
 import DetailDrawer from "./DetailDrawer";
 
 import {
-  Bot,
-  Server,
   Info,
   TrendingUp,
   TrendingDown,
@@ -198,39 +195,7 @@ function useMarketFeed() {
   return { feed, loading, error, lastUpdated };
 }
 
-function Gauge({ label, value }: { label: string; value: number }) {
-  const safeValue = Math.min(100, Math.max(0, Math.round(value || 0)));
-  const circumference = 2 * Math.PI * 34;
-  const offset = circumference - (safeValue / 100) * circumference;
-
-  let strokeColor = "#00e5ff";
-  if (safeValue >= 85) strokeColor = "#ff5c7a";
-  else if (safeValue >= 70) strokeColor = "#ff9f43";
-
-  return (
-    <div className="gauge" title={`${label}: ${safeValue}%`}>
-      <svg viewBox="0 0 80 80">
-        <circle cx="40" cy="40" r="34" className="gauge-track" />
-        <circle
-          cx="40"
-          cy="40"
-          r="34"
-          className="gauge-fill"
-          style={{ stroke: strokeColor }}
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-        />
-      </svg>
-      <div className="gauge-center">
-        <strong>{safeValue}%</strong>
-      </div>
-      <span className="gauge-label">{label}</span>
-    </div>
-  );
-}
-
 export default function CommandCenter({ messages, voice: _voice }: CommandCenterProps) {
-  const system = useSystem();
   const { feed: marketFeed, loading: marketLoading, error: marketError, lastUpdated } = useMarketFeed();
   const {
     items: desktopItems,
@@ -275,7 +240,7 @@ export default function CommandCenter({ messages, voice: _voice }: CommandCenter
     <div className="command-center">
       {/* Row 1 */}
       <div className="cc-row cc-row-top">
-        {/* AI Core Overview — Start-menu style icon grid */}
+        {/* AI Core Overview — left places list + right apps (3 per row) */}
         <div className="cc-card ai-overview">
           <div className="card-header">
             <span className="icon-badge badge-cyan">
@@ -292,84 +257,90 @@ export default function CommandCenter({ messages, voice: _voice }: CommandCenter
             </button>
           </div>
 
-          {/* Quick places: Home, Downloads, Documents… */}
-          <div className="places-label">Places</div>
-          <div className="icon-tile-grid places-grid">
-            {places.map((p) => (
-              <button
-                key={p.placeId || p.path}
-                className={`icon-tile ${placeColor(p.placeId)}`}
-                title={p.path}
-                onClick={() => openDesktopItem(p)}
-              >
-                <span className="tile-icon">{tileIcon(p)}</span>
-                <span className="tile-name">{p.displayName}</span>
-              </button>
-            ))}
-          </div>
+          <div className="overview-split">
+            {/* LEFT — Places list (icon + name) */}
+            <div className="places-panel">
+              <div className="places-label">Places</div>
+              <div className="places-list">
+                {places.map((p) => (
+                  <button
+                    key={p.placeId || p.path}
+                    className={`place-row ${placeColor(p.placeId)}`}
+                    title={p.path}
+                    onClick={() => openDesktopItem(p)}
+                  >
+                    <span className="place-icon">{tileIcon(p)}</span>
+                    <span className="place-name">{p.displayName}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
 
-          {/* Desktop apps / shortcuts / folders */}
-          <div className="places-label apps-label">Desktop</div>
-          <div className="icon-tile-grid apps-grid">
-            {desktopLoading && desktopItems.length === 0 && (
-              <div className="tile-empty">Scanning…</div>
-            )}
-            {desktopError && desktopItems.length === 0 && (
-              <div className="tile-empty">Could not read Desktop</div>
-            )}
-            {!desktopLoading && !desktopError && desktopItems.length === 0 && (
-              <div className="tile-empty">Desktop is empty</div>
-            )}
+            {/* RIGHT — Desktop apps, 3 per row, icon above name */}
+            <div className="apps-panel">
+              <div className="places-label">Desktop</div>
+              <div className="apps-grid-3">
+                {desktopLoading && desktopItems.length === 0 && (
+                  <div className="tile-empty">Scanning…</div>
+                )}
+                {desktopError && desktopItems.length === 0 && (
+                  <div className="tile-empty">Could not read Desktop</div>
+                )}
+                {!desktopLoading && !desktopError && desktopItems.length === 0 && (
+                  <div className="tile-empty">Desktop is empty</div>
+                )}
 
-            {desktopItems.slice(0, 18).map((item) => (
-              <button
-                key={item.path}
-                className={`icon-tile ${
-                  item.type === "folder"
-                    ? "tile-folder"
-                    : item.type === "app" || item.type === "shortcut"
-                      ? "tile-app"
-                      : "tile-file"
-                }`}
-                title={item.name}
-                onClick={() => openDesktopItem(item)}
-              >
-                <span className="tile-icon">{tileIcon(item)}</span>
-                <span className="tile-name">{item.displayName}</span>
-              </button>
-            ))}
+                {desktopItems.slice(0, 15).map((item) => (
+                  <button
+                    key={item.path}
+                    className={`icon-tile ${
+                      item.type === "folder"
+                        ? "tile-folder"
+                        : item.type === "app" || item.type === "shortcut"
+                          ? "tile-app"
+                          : "tile-file"
+                    }`}
+                    title={item.name}
+                    onClick={() => openDesktopItem(item)}
+                  >
+                    <span className="tile-icon">{tileIcon(item)}</span>
+                    <span className="tile-name">{item.displayName}</span>
+                  </button>
+                ))}
 
-            {desktopItems.length > 18 && (
-              <button
-                className="icon-tile tile-more"
-                onClick={() =>
-                  openDrawer("Desktop", (
-                    <div className="icon-tile-grid drawer-grid">
-                      {desktopItems.map((item) => (
-                        <button
-                          key={item.path}
-                          className={`icon-tile ${
-                            item.type === "folder"
-                              ? "tile-folder"
-                              : item.type === "app" || item.type === "shortcut"
-                                ? "tile-app"
-                                : "tile-file"
-                          }`}
-                          title={item.name}
-                          onClick={() => openDesktopItem(item)}
-                        >
-                          <span className="tile-icon">{tileIcon(item)}</span>
-                          <span className="tile-name">{item.displayName}</span>
-                        </button>
-                      ))}
-                    </div>
-                  ))
-                }
-              >
-                <span className="tile-icon more-count">+{desktopItems.length - 18}</span>
-                <span className="tile-name">More</span>
-              </button>
-            )}
+                {desktopItems.length > 15 && (
+                  <button
+                    className="icon-tile tile-more"
+                    onClick={() =>
+                      openDrawer("Desktop", (
+                        <div className="apps-grid-3 drawer-grid">
+                          {desktopItems.map((item) => (
+                            <button
+                              key={item.path}
+                              className={`icon-tile ${
+                                item.type === "folder"
+                                  ? "tile-folder"
+                                  : item.type === "app" || item.type === "shortcut"
+                                    ? "tile-app"
+                                    : "tile-file"
+                              }`}
+                              title={item.name}
+                              onClick={() => openDesktopItem(item)}
+                            >
+                              <span className="tile-icon">{tileIcon(item)}</span>
+                              <span className="tile-name">{item.displayName}</span>
+                            </button>
+                          ))}
+                        </div>
+                      ))
+                    }
+                  >
+                    <span className="tile-icon more-count">+{desktopItems.length - 15}</span>
+                    <span className="tile-name">More</span>
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -454,63 +425,6 @@ export default function CommandCenter({ messages, voice: _voice }: CommandCenter
               </div>
             </div>
           ))}
-        </div>
-      </div>
-
-      {/* Row 2 */}
-      <div className="cc-row cc-row-bottom">
-        <div className="cc-card system-monitor">
-          <div className="card-header">
-            <span className="icon-badge badge-cyan">
-              <Server size={15} />
-            </span>
-            <h3>SYSTEM MONITOR</h3>
-          </div>
-          <div className="gauges">
-            <Gauge label="CPU" value={system?.cpu ?? 0} />
-            <Gauge label="RAM" value={system?.ram ?? 0} />
-            <Gauge label="Disk" value={system?.storage ?? 0} />
-          </div>
-        </div>
-
-        <div className="cc-card llm-status">
-          <div className="card-header">
-            <span className="icon-badge badge-purple">
-              <Bot size={15} />
-            </span>
-            <h3>LLM STATUS</h3>
-          </div>
-          <div className="llm-grid">
-            <div
-              className="llm-item linked clickable"
-              onClick={() =>
-                openDrawer("Hunyuan (Hy3)", (
-                  <div>
-                    <p><strong>Status:</strong> Connected</p>
-                    <p><strong>Type:</strong> Reasoning Model</p>
-                    <p>Ready for complex multi-step reasoning and analysis.</p>
-                  </div>
-                ))
-              }
-            >
-              Hunyuan (Hy3) <em>Connected</em>
-            </div>
-
-            <div
-              className="llm-item linked clickable"
-              onClick={() =>
-                openDrawer("Qwen3-Coder", (
-                  <div>
-                    <p><strong>Status:</strong> Connected</p>
-                    <p><strong>Type:</strong> Coding Model</p>
-                    <p>Specialized for code generation and technical tasks.</p>
-                  </div>
-                ))
-              }
-            >
-              Qwen3-Coder <em>Connected</em>
-            </div>
-          </div>
         </div>
       </div>
 
