@@ -1,29 +1,23 @@
 import { useEffect, useState } from "react";
-import { X, Settings as SettingsIcon, ChevronDown, Search, Check } from "lucide-react";
+import { X, Settings as SettingsIcon, ChevronDown, Check } from "lucide-react";
 import { setPreferredVoice, getPreferredVoice } from "../../voice/useVoice";
 import type { ReplyLang } from "../../../llm/openrouter";
 import type { Page } from "./MainLayout";
 import { invalidateApiKeyCache } from "../../../llm/openrouter";
 import { useTheme } from "../../hooks/useTheme";
 import {
-  LAUNCHER_CATALOG,
-  LAUNCHER_APPS_KEY,
-  DEFAULT_LAUNCHER_STATE,
-  parseLauncherState,
-  type LauncherAppsState
-} from "./launcherCatalog";
+  HUB_SETTINGS_KEY,
+  DEFAULT_HUB_SETTINGS,
+  loadHubSettings,
+  clampHubValue,
+  type HubSettings
+} from "../dashboard/CommandCenter";
 import "./SettingsPanel.css";
 
 interface SidebarItem {
   page: Page;
   label: string;
   enabled: boolean;
-}
-
-interface SystemApp {
-  name: string;
-  id: string;
-  icon: string;
 }
 
 interface SettingsPanelProps {
@@ -55,25 +49,13 @@ export default function SettingsPanel({
   const [selectedVoice, setSelectedVoice] = useState(getPreferredVoice() ?? "");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Add System App
-  const [addAppsOpen, setAddAppsOpen] = useState(false);
-  const [allApps, setAllApps] = useState<SystemApp[]>([]);
-  const [appsLoading, setAppsLoading] = useState(false);
-  const [appSearch, setAppSearch] = useState("");
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [adding, setAdding] = useState(false);
-  const [justAdded, setJustAdded] = useState(false);
-
-  // Add Launcher App
-  const [addPagesOpen, setAddPagesOpen] = useState(false);
-  const [launcherState, setLauncherState] = useState<LauncherAppsState>(DEFAULT_LAUNCHER_STATE);
-  const [selectedPages, setSelectedPages] = useState<Set<Page>>(new Set());
-  const [addingPages, setAddingPages] = useState(false);
-  const [pagesJustAdded, setPagesJustAdded] = useState(false);
-
   // Theme
   const { theme, setTheme, themes } = useTheme();
   const [themeOpen, setThemeOpen] = useState(false);
+
+  // Desktop Hub settings
+  const [hubOpen, setHubOpen] = useState(false);
+  const [hubSettings, setHubSettingsState] = useState<HubSettings>(DEFAULT_HUB_SETTINGS);
 
   // Taskbar settings
   const [taskbarOpen, setTaskbarOpen] = useState(false);
@@ -93,24 +75,6 @@ export default function SettingsPanel({
     loadVoices();
     window.speechSynthesis.onvoiceschanged = loadVoices;
   }, [open]);
-
-  useEffect(() => {
-    if (!addAppsOpen || allApps.length > 0) return;
-    setAppsLoading(true);
-    window.vsmart
-      .getInstalledApps()
-      .then(setAllApps)
-      .catch(() => setAllApps([]))
-      .finally(() => setAppsLoading(false));
-  }, [addAppsOpen, allApps.length]);
-
-  useEffect(() => {
-    if (!addPagesOpen) return;
-    window.vsmart
-      .getMemory(LAUNCHER_APPS_KEY)
-      .then((raw) => setLauncherState(parseLauncherState(raw)))
-      .catch(() => setLauncherState(DEFAULT_LAUNCHER_STATE));
-  }, [addPagesOpen]);
 
   // Load taskbar settings when panel opens
   useEffect(() => {
@@ -140,7 +104,38 @@ export default function SettingsPanel({
       .catch(() => setHasKey(false));
   }, [open]);
 
+  // Load Desktop Hub settings when panel opens
+  useEffect(() => {
+    if (!open) return;
+    setHubSettingsState(loadHubSettings());
+  }, [open]);
+
   if (!open) return null;
+
+  const updateHubSettings = (patch: Partial<HubSettings>) => {
+    setHubSettingsState((prev) => {
+      const next = { ...prev, ...patch };
+      try {
+        localStorage.setItem(HUB_SETTINGS_KEY, JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
+      window.dispatchEvent(
+        new CustomEvent("vsmart-hub-settings", { detail: next })
+      );
+      return next;
+    });
+  };
+
+  const stepHubValue = (
+    key: "placesIconSize" | "desktopTextSize" | "desktopIconSize" | "appsGridCols",
+    delta: number,
+    min: number,
+    max: number
+  ) => {
+    const current = hubSettings[key] as number;
+    updateHubSettings({ [key]: clampHubValue(current + delta, min, max) } as Partial<HubSettings>);
+  };
 
   const handleVoiceChange = (name: string) => {
     setSelectedVoice(name);
@@ -152,64 +147,6 @@ export default function SettingsPanel({
       item.page === page ? { ...item, enabled: !item.enabled } : item
     );
     onSidebarChange(sidebarEnabled, updated);
-  };
-
-  const filteredApps = allApps.filter((a) =>
-    a.name.toLowerCase().includes(appSearch.trim().toLowerCase())
-  );
-
-  const toggleAppSelected = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const handleAddApps = async () => {
-    if (selectedIds.size === 0) return;
-    setAdding(true);
-    try {
-      const toAdd = allApps.filter((a) => selectedIds.has(a.id));
-      await window.vsmart.launcher.addLibraryApps(toAdd);
-      setSelectedIds(new Set());
-      setJustAdded(true);
-      setTimeout(() => setJustAdded(false), 2000);
-    } finally {
-      setAdding(false);
-    }
-  };
-
-  const availablePages = LAUNCHER_CATALOG.filter(
-    (entry) => !launcherState.added.includes(entry.page)
-  );
-
-  const togglePageSelected = (page: Page) => {
-    setSelectedPages((prev) => {
-      const next = new Set(prev);
-      if (next.has(page)) next.delete(page);
-      else next.add(page);
-      return next;
-    });
-  };
-
-  const handleAddPages = async () => {
-    if (selectedPages.size === 0) return;
-    setAddingPages(true);
-    try {
-      const next: LauncherAppsState = {
-        ...launcherState,
-        added: [...launcherState.added, ...Array.from(selectedPages)]
-      };
-      await window.vsmart.saveMemory(LAUNCHER_APPS_KEY, JSON.stringify(next));
-      setLauncherState(next);
-      setSelectedPages(new Set());
-      setPagesJustAdded(true);
-      setTimeout(() => setPagesJustAdded(false), 2000);
-    } finally {
-      setAddingPages(false);
-    }
   };
 
   const handlePositionChange = (pos: TaskbarPosition) => {
@@ -374,131 +311,6 @@ const handleClearApiKey = async () => {
             )}
           </div>
 
-          {/* Add System App */}
-          <div className="sidebar-settings-box">
-            <button
-              className="sidebar-dropdown"
-              onClick={() => setAddAppsOpen(!addAppsOpen)}
-            >
-              <span>Add System App</span>
-              <ChevronDown size={16} className={addAppsOpen ? "rotate" : ""} />
-            </button>
-
-            {addAppsOpen && (
-              <div className="sidebar-dropdown-content">
-                <div className="app-picker-search">
-                  <Search size={14} />
-                  <input
-                    type="text"
-                    placeholder="Search installed apps..."
-                    value={appSearch}
-                    onChange={(e) => setAppSearch(e.target.value)}
-                  />
-                </div>
-
-                {appsLoading && allApps.length === 0 ? (
-                  <div className="app-picker-status">Loading apps...</div>
-                ) : filteredApps.length === 0 ? (
-                  <div className="app-picker-status">No apps found</div>
-                ) : (
-                  <div className="app-picker-list">
-                    {filteredApps.map((app) => {
-                      const checked = selectedIds.has(app.id);
-                      return (
-                        <label className="app-picker-row" key={app.id}>
-                          <span className={checked ? "app-checkbox checked" : "app-checkbox"}>
-                            {checked && <Check size={12} />}
-                          </span>
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => toggleAppSelected(app.id)}
-                          />
-                          {app.icon ? (
-                            <img src={app.icon} width={20} height={20} loading="lazy" />
-                          ) : (
-                            <span className="app-picker-icon-fallback" />
-                          )}
-                          <span className="app-picker-name">{app.name}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                )}
-
-                <button
-                  className="app-picker-add-btn"
-                  disabled={selectedIds.size === 0 || adding}
-                  onClick={handleAddApps}
-                >
-                  {adding
-                    ? "Adding..."
-                    : justAdded
-                      ? "Added ✓"
-                      : selectedIds.size > 0
-                        ? `Add ${selectedIds.size} app${selectedIds.size > 1 ? "s" : ""}`
-                        : "Add"}
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Add Launcher App */}
-          <div className="sidebar-settings-box">
-            <button
-              className="sidebar-dropdown"
-              onClick={() => setAddPagesOpen(!addPagesOpen)}
-            >
-              <span>Add Launcher App</span>
-              <ChevronDown size={16} className={addPagesOpen ? "rotate" : ""} />
-            </button>
-
-            {addPagesOpen && (
-              <div className="sidebar-dropdown-content">
-                {availablePages.length === 0 ? (
-                  <div className="app-picker-status">
-                    All launcher apps are already added.
-                  </div>
-                ) : (
-                  <div className="app-picker-list">
-                    {availablePages.map((entry) => {
-                      const checked = selectedPages.has(entry.page);
-                      return (
-                        <label className="app-picker-row" key={entry.page}>
-                          <span className={checked ? "app-checkbox checked" : "app-checkbox"}>
-                            {checked && <Check size={12} />}
-                          </span>
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => togglePageSelected(entry.page)}
-                          />
-                          <span className="app-picker-name">{entry.label}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {availablePages.length > 0 && (
-                  <button
-                    className="app-picker-add-btn"
-                    disabled={selectedPages.size === 0 || addingPages}
-                    onClick={handleAddPages}
-                  >
-                    {addingPages
-                      ? "Adding..."
-                      : pagesJustAdded
-                        ? "Added ✓"
-                        : selectedPages.size > 0
-                          ? `Add ${selectedPages.size} app${selectedPages.size > 1 ? "s" : ""}`
-                          : "Add"}
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
           {/* ===== Theme ===== */}
           <div className="sidebar-settings-box">
             <button
@@ -531,6 +343,119 @@ const handleClearApiKey = async () => {
                       <span className="theme-swatch-name">{t.label}</span>
                     </button>
                   ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ===== Desktop Hub Settings ===== */}
+          <div className="sidebar-settings-box">
+            <button className="sidebar-dropdown" onClick={() => setHubOpen(!hubOpen)}>
+              <span>Desktop Hub</span>
+              <ChevronDown size={16} className={hubOpen ? "rotate" : ""} />
+            </button>
+
+            {hubOpen && (
+              <div className="sidebar-dropdown-content">
+                {/* Show Places */}
+                <div className="settings-row">
+                  <div className="settings-label">
+                    <strong>Show Places</strong>
+                    <span>Toggle the Places list in the Desktop Hub.</span>
+                  </div>
+                  <button
+                    className={hubSettings.showPlaces ? "switch on" : "switch"}
+                    onClick={() => updateHubSettings({ showPlaces: !hubSettings.showPlaces })}
+                  >
+                    <span className="switch-knob" />
+                  </button>
+                </div>
+
+                {/* Show Desktop */}
+                <div className="settings-row">
+                  <div className="settings-label">
+                    <strong>Show Desktop</strong>
+                    <span>Toggle the Desktop apps/files grid in the Hub.</span>
+                  </div>
+                  <button
+                    className={hubSettings.showDesktop ? "switch on" : "switch"}
+                    onClick={() => updateHubSettings({ showDesktop: !hubSettings.showDesktop })}
+                  >
+                    <span className="switch-knob" />
+                  </button>
+                </div>
+
+                {/* Layout */}
+                <div className="settings-row">
+                  <div className="settings-label">
+                    <strong>Desktop Layout</strong>
+                    <span>Grid or list layout for desktop items.</span>
+                  </div>
+                  <div className="settings-control lang-toggle-settings">
+                    {(["grid", "list"] as const).map((layout) => (
+                      <button
+                        key={layout}
+                        className={hubSettings.appsLayout === layout ? "lang-btn active" : "lang-btn"}
+                        onClick={() => updateHubSettings({ appsLayout: layout })}
+                      >
+                        {layout.charAt(0).toUpperCase() + layout.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Grid columns (only relevant in Grid layout) */}
+                {hubSettings.appsLayout === "grid" && (
+                  <div className="settings-row">
+                    <div className="settings-label">
+                      <strong>Apps per Row</strong>
+                      <span>How many apps show side by side in Grid layout.</span>
+                    </div>
+                    <div className="size-stepper">
+                      <button onClick={() => stepHubValue("appsGridCols", -1, 2, 6)}>–</button>
+                      <span>{hubSettings.appsGridCols}</span>
+                      <button onClick={() => stepHubValue("appsGridCols", 1, 2, 6)}>+</button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Desktop text size */}
+                <div className="settings-row">
+                  <div className="settings-label">
+                    <strong>Text Size</strong>
+                    <span>Font size for desktop item labels.</span>
+                  </div>
+                  <div className="size-stepper">
+                    <button onClick={() => stepHubValue("desktopTextSize", -1, 8, 16)}>–</button>
+                    <span>{hubSettings.desktopTextSize}px</span>
+                    <button onClick={() => stepHubValue("desktopTextSize", 1, 8, 16)}>+</button>
+                  </div>
+                </div>
+
+                {/* Desktop icon size */}
+                <div className="settings-row">
+                  <div className="settings-label">
+                    <strong>Desktop Icon Size</strong>
+                    <span>Icon size for desktop apps and files.</span>
+                  </div>
+                  <div className="size-stepper">
+                    <button onClick={() => stepHubValue("desktopIconSize", -4, 32, 72)}>–</button>
+                    <span>{hubSettings.desktopIconSize}px</span>
+                    <button onClick={() => stepHubValue("desktopIconSize", 4, 32, 72)}>+</button>
+                  </div>
+                </div>
+
+                {/* Places icon size */}
+                <div className="settings-row">
+                  <div className="settings-label">
+                    <strong>Places Icon Size</strong>
+                    <span>Icon size for the Places list.</span>
+                  </div>
+                  <div className="size-stepper">
+                    <button onClick={() => stepHubValue("placesIconSize", -2, 14, 36)}>–</button>
+                    <span>{hubSettings.placesIconSize}px</span>
+                    <button onClick={() => stepHubValue("placesIconSize", 2, 14, 36)}>+</button>
+                  </div>
                 </div>
               </div>
             )}

@@ -263,10 +263,6 @@ export default function MainLayout() {
           <CommandCenter
             messages={messages}
             voice={voice}
-            onOpenChat={() => {
-              setChatOpen(true);
-              setChatMinimized(false);
-            }}
           />
         );
       case "aicore":
@@ -290,10 +286,6 @@ export default function MainLayout() {
           <CommandCenter
             messages={messages}
             voice={voice}
-            onOpenChat={() => {
-              setChatOpen(true);
-              setChatMinimized(false);
-            }}
           />
         );
     }
