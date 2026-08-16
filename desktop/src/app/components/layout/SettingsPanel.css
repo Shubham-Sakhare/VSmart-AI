@@ -387,11 +387,70 @@
     cursor:default;
 }
 /* ===== Theme picker ===== */
+.theme-view-switch{
+    display:flex;
+    gap:4px;
+    justify-content:flex-end;
+    margin-bottom:8px;
+}
+.theme-view-btn{
+    width:26px;
+    height:26px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:6px;
+    border:1px solid rgba(var(--accent-rgb), .15);
+    background:transparent;
+    color:var(--text-dim);
+    cursor:pointer;
+    transition:.15s;
+}
+.theme-view-btn.active{
+    background:rgba(var(--accent-rgb), .15);
+    color:var(--accent);
+    border-color:rgba(var(--accent-rgb), .4);
+}
 .theme-grid{
     display:grid;
     grid-template-columns:repeat(3, 1fr);
     gap:10px;
     padding:2px 2px 4px;
+}
+.theme-list{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    padding:2px 2px 4px;
+}
+.theme-list .theme-swatch{
+    flex-direction:row;
+    align-items:center;
+    justify-content:flex-start;
+    gap:10px;
+    padding:8px 10px;
+    width:100%;
+    border-radius:8px;
+}
+.theme-list .theme-swatch-preview{
+    width:26px;
+    height:26px;
+    flex-shrink:0;
+}
+.theme-list .theme-swatch-name{
+    font-size:12.5px;
+    white-space:nowrap;
+    flex:1;
+    text-align:left;
+}
+.theme-list-active-tag{
+    font-size:10px;
+    font-weight:600;
+    color:var(--accent);
+    background:rgba(var(--accent-rgb), .12);
+    padding:2px 8px;
+    border-radius:20px;
+    flex-shrink:0;
 }
 .theme-swatch{
     display:flex;
@@ -409,8 +468,8 @@
     background:rgba(255,255,255,.05);
 }
 .theme-swatch.active{
-    border-color:rgba(0,229,255,.4);
-    background:rgba(0,229,255,.08);
+    border-color:rgba(var(--accent-rgb),.4);
+    background:rgba(var(--accent-rgb),.08);
 }
 .theme-swatch-preview{
     width:38px;
@@ -424,10 +483,10 @@
 }
 .theme-swatch-name{
     font-size:10.5px;
-    color:#a9c3d4;
+    color:var(--text-dim);
     text-align:center;
     white-space:nowrap;
 }
 .theme-swatch.active .theme-swatch-name{
-    color:#e8f7fc;
+    color:var(--text-primary);
 }

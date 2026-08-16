@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, Settings as SettingsIcon, ChevronDown, Check } from "lucide-react";
+import { X, Settings as SettingsIcon, ChevronDown, Check, LayoutGrid, List as ListIcon } from "lucide-react";
 import { setPreferredVoice, getPreferredVoice } from "../../voice/useVoice";
 import type { ReplyLang } from "../../../llm/openrouter";
 import type { Page } from "./MainLayout";
@@ -52,6 +52,7 @@ export default function SettingsPanel({
   // Theme
   const { theme, setTheme, themes } = useTheme();
   const [themeOpen, setThemeOpen] = useState(false);
+  const [themeViewMode, setThemeViewMode] = useState<"grid" | "list">("grid");
 
   // Desktop Hub settings
   const [hubOpen, setHubOpen] = useState(false);
@@ -323,7 +324,26 @@ const handleClearApiKey = async () => {
 
             {themeOpen && (
               <div className="sidebar-dropdown-content">
-                <div className="theme-grid">
+                <div className="theme-view-switch">
+                  <button
+                    type="button"
+                    className={themeViewMode === "grid" ? "theme-view-btn active" : "theme-view-btn"}
+                    onClick={() => setThemeViewMode("grid")}
+                    title="Grid view"
+                  >
+                    <LayoutGrid size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    className={themeViewMode === "list" ? "theme-view-btn active" : "theme-view-btn"}
+                    onClick={() => setThemeViewMode("list")}
+                    title="List view"
+                  >
+                    <ListIcon size={14} />
+                  </button>
+                </div>
+
+                <div className={themeViewMode === "list" ? "theme-list" : "theme-grid"}>
                   {themes.map((t) => (
                     <button
                       key={t.id}
@@ -341,6 +361,9 @@ const handleClearApiKey = async () => {
                         {theme === t.id && <Check size={13} />}
                       </span>
                       <span className="theme-swatch-name">{t.label}</span>
+                      {themeViewMode === "list" && theme === t.id && (
+                        <span className="theme-list-active-tag">Active</span>
+                      )}
                     </button>
                   ))}
                 </div>

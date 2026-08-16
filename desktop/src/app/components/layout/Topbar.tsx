@@ -78,14 +78,14 @@ export default function Topbar({ onOpenSettings }: TopbarProps) {
         <div className="topbar-left">
           <div className="ai-state">
             <span className="pulse"></span>
-            SYSTEM STATUS &nbsp;OPTIMAL
+            <span className="ai-state-brand">VSmart&nbsp;2.0</span>
           </div>
         </div>
 
         <div className="topbar-center">
           <div className="clock-block">
-            <span className="clock-date">{dateStr}</span>
             <span className="clock-time">{timeStr}</span>
+            <span className="clock-date">{dateStr}</span>
           </div>
         </div>
 
