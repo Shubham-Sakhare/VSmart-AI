@@ -1,16 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Sparkles, Send, Paperclip, ImageIcon, Lightbulb, ListChecks,
-  Plus, Trash2, MessageSquare, X
+  Plus, Trash2, MessageSquare, X, Copy, Check
 } from "lucide-react";
 import { askAI } from "../../../llm/provider";
 import type { ReplyLang } from "../../../llm/openrouter";
+import { renderLiteMarkdown } from "./MarkdownLite";
 import "./VSmartAIPage.css";
 
 interface ChatMessage {
   id: string;
   sender: "You" | "VSmart";
   text: string;
+  ts: number;
 }
 
 interface ChatSession {
@@ -36,6 +38,7 @@ export default function VSmartAIPage({ replyLang = "en" }: { replyLang?: ReplyLa
   const [loading, setLoading] = useState(false);
   const [attachedFile, setAttachedFile] = useState<{ name: string; content: string } | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -81,6 +84,19 @@ export default function VSmartAIPage({ replyLang = "en" }: { replyLang?: ReplyLa
 
   const handleFilePick = () => fileInputRef.current?.click();
 
+  const copyMessage = async (msg: ChatMessage) => {
+    try {
+      await navigator.clipboard.writeText(msg.text);
+      setCopiedId(msg.id);
+      setTimeout(() => setCopiedId((prev) => (prev === msg.id ? null : prev)), 1500);
+    } catch {
+      // clipboard unavailable — ignore silently
+    }
+  };
+
+  const formatTime = (ts: number) =>
+    new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -107,7 +123,7 @@ export default function VSmartAIPage({ replyLang = "en" }: { replyLang?: ReplyLa
       ? `${trimmed}${trimmed ? "\n" : ""}📎 ${attachedFile.name}`
       : trimmed;
 
-    const userMsg: ChatMessage = { id: `${Date.now()}-u`, sender: "You", text: displayText };
+    const userMsg: ChatMessage = { id: `${Date.now()}-u`, sender: "You", text: displayText, ts: Date.now() };
 
     let sessionId = activeId;
 
@@ -131,12 +147,12 @@ export default function VSmartAIPage({ replyLang = "en" }: { replyLang?: ReplyLa
 
     try {
       const reply = await askAI(promptForAI, replyLang);
-      const aiMsg: ChatMessage = { id: `${Date.now()}-a`, sender: "VSmart", text: reply };
+      const aiMsg: ChatMessage = { id: `${Date.now()}-a`, sender: "VSmart", text: reply, ts: Date.now() };
       setSessions(prev => prev.map(s =>
         s.id === sessionId ? { ...s, messages: [...s.messages, aiMsg], updatedAt: Date.now() } : s
       ));
     } catch {
-      const aiMsg: ChatMessage = { id: `${Date.now()}-a`, sender: "VSmart", text: "Something went wrong reaching the AI. Please check the API key/connection and try again." };
+      const aiMsg: ChatMessage = { id: `${Date.now()}-a`, sender: "VSmart", text: "Something went wrong reaching the AI. Please check the API key/connection and try again.", ts: Date.now() };
       setSessions(prev => prev.map(s =>
         s.id === sessionId ? { ...s, messages: [...s.messages, aiMsg], updatedAt: Date.now() } : s
       ));
@@ -205,7 +221,21 @@ export default function VSmartAIPage({ replyLang = "en" }: { replyLang?: ReplyLa
                   <div className="vsai-avatar"><Sparkles size={14} /></div>
                 )}
                 <div className="vsai-bubble">
-                  <p>{m.text}</p>
+                  <div className="vsai-bubble-top">
+                    {m.sender === "VSmart" && <span className="vsai-bubble-sender">VSmart</span>}
+                    {m.sender === "VSmart" && (
+                      <button
+                        type="button"
+                        className="vsai-copy-btn"
+                        title="Copy message"
+                        onClick={() => copyMessage(m)}
+                      >
+                        {copiedId === m.id ? <Check size={12} /> : <Copy size={12} />}
+                      </button>
+                    )}
+                  </div>
+                  {m.sender === "VSmart" ? renderLiteMarkdown(m.text) : <p>{m.text}</p>}
+                  <span className="vsai-bubble-time">{formatTime(m.ts)}</span>
                 </div>
               </div>
             ))}
@@ -251,7 +281,11 @@ export default function VSmartAIPage({ replyLang = "en" }: { replyLang?: ReplyLa
               rows={1}
             />
 
-            <button className="vsai-send-btn" onClick={() => send(input)} disabled={loading}>
+            <button
+              className="vsai-send-btn"
+              onClick={() => send(input)}
+              disabled={loading || (!input.trim() && !attachedFile)}
+            >
               <Send size={16} />
             </button>
           </div>
