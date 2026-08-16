@@ -9,7 +9,9 @@ import {
   reorderLibraryApps,
   setLibraryAppPinned,
   pickAndSetLibraryIcon,
-  pickImageAsDataUrl
+  pickImageAsDataUrl,
+  pickAndAddCustomApp,
+  launchLibraryAppPath
 } from "../services/systemService.js";
 
 export function registerLauncherIPC() {
@@ -106,6 +108,25 @@ export function registerLauncherIPC() {
     } catch (error) {
       console.error("launcher:pickImage IPC error:", error);
       return null;
+    }
+  });
+
+  // Manual "+" add flow for apps the automatic scan didn't pick up.
+  ipcMain.handle("launcher:pickAndAddCustomApp", async () => {
+    try {
+      return await pickAndAddCustomApp();
+    } catch (error) {
+      console.error("launcher:pickAndAddCustomApp IPC error:", error);
+      return [];
+    }
+  });
+
+  ipcMain.handle("launcher:launchPath", async (_, filePath: string) => {
+    try {
+      return await launchLibraryAppPath(filePath);
+    } catch (error) {
+      console.error("launcher:launchPath IPC error:", error);
+      return false;
     }
   });
 

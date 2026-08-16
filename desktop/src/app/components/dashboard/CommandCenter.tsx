@@ -5,11 +5,11 @@ import type { VoiceControls } from "../../voice/useVoice";
 import heartVideo from "../../../assets/vsmart-ai-videos/vsmart-heart.mp4";
 import DetailDrawer from "./DetailDrawer";
 
-import iconDocuments from "../../../assets/vsmart-ai-images/file-icons/Documents.png";
-import iconDownloads from "../../../assets/vsmart-ai-images/file-icons/Downloads.png";
+import iconDocuments from "../../../assets/vsmart-ai-images/file-icons/documents.png";
+import iconDownloads from "../../../assets/vsmart-ai-images/file-icons/downloads.png";
 import iconMedia from "../../../assets/vsmart-ai-images/file-icons/Media.png";
 import iconMusics from "../../../assets/vsmart-ai-images/file-icons/Musics.png";
-import iconVideos from "../../../assets/vsmart-ai-images/file-icons/Videos.png";
+import iconVideos from "../../../assets/vsmart-ai-images/file-icons/VIdeos.png";
 
 import {
   Info,

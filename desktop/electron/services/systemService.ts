@@ -276,6 +276,54 @@ resolve(true);
 
 }
 
+// Manually add an app that the automatic shell:AppsFolder scan missed
+// (e.g. a portable .exe not registered with Windows). The user picks a
+// file, we store its raw path as the id/path so launchLibraryAppPath can
+// start it directly later. Icon starts empty - the existing "Edit icon"
+// flow (pickAndSetLibraryIcon) already covers setting a custom one.
+export async function pickAndAddCustomApp():Promise<LibraryApp[]>{
+
+const result=await dialog.showOpenDialog({
+title:"Choose an application",
+filters:[{name:"Applications",extensions:["exe","lnk"]}],
+properties:["openFile"]
+});
+
+if(result.canceled||!result.filePaths[0]){
+return readLibrary();
+}
+
+const filePath=result.filePaths[0];
+const name=path.basename(filePath).replace(/\.(exe|lnk)$/i,"");
+const id=`custom:${filePath}`;
+
+const list=readLibrary();
+
+if(!list.find(a=>a.id===id)){
+list.push({
+name,
+id,
+icon:"",
+path:filePath,
+pinned:false
+});
+writeLibrary(list);
+}
+
+return list;
+
+}
+
+// Launches a manually-added app by its stored file path (as opposed to
+// launchSystemApp, which resolves shell:AppsFolder ids for auto-scanned apps).
+export function launchLibraryAppPath(filePath:string):Promise<boolean>{
+return new Promise((resolve)=>{
+exec(`start "" "${filePath.replace(/"/g,"")}"`,(error)=>{
+resolve(!error);
+});
+});
+}
+
 /* ================= launcher library: add / remove / pin / edit icon ================= */
 // One list is the single source of truth:
 //  - the "System icon" panel (next to the V logo) shows every app the user

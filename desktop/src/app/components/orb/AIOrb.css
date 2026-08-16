@@ -20,7 +20,7 @@
   box-shadow:
     0 0 25px #00eaff,
     0 0 60px rgba(0, 255, 255, .5),
-    inset 0 0 30px rgba(255,255,255,.15);
+    inset 0 0 30px rgba(var(--border-rgb), .15);
   animation: corePulse 4s ease-in-out infinite;
 }
 

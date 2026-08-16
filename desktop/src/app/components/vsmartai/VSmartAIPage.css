@@ -56,7 +56,7 @@
     border-radius:12px;
     background:var(--gradient-primary);
     border:none;
-    color:#ffffff;
+    color:var(--text-on-accent);
     font-size:13px;
     font-weight:700;
     letter-spacing:.2px;
@@ -145,7 +145,7 @@
 }
 
 .vsai-history-delete:hover{
-    background:rgba(255,80,80,.15);
+    background:rgba(var(--danger-rgb), .15);
     color:#ff8080;
 }
 
@@ -260,7 +260,7 @@
     justify-content:center;
     background:var(--gradient-primary);
     border:1px solid rgba(var(--accent-rgb), .4);
-    color:#ffffff;
+    color:var(--text-on-accent);
     box-shadow:0 0 14px rgba(var(--accent-rgb), .3);
     flex-shrink:0;
 }
@@ -274,7 +274,7 @@
     font-size:14px;
     line-height:1.65;
     color:var(--text-primary);
-    box-shadow:0 4px 16px rgba(0,0,0,.18);
+    box-shadow:0 4px 16px rgba(var(--shadow-color-rgb), .18);
     transition:box-shadow .2s, transform .2s;
 }
 
@@ -283,7 +283,7 @@
 }
 
 .vsai-msg-row.ai .vsai-bubble:hover{
-    box-shadow:0 6px 22px rgba(0,0,0,.22), 0 0 0 1px rgba(var(--accent-rgb), .2);
+    box-shadow:0 6px 22px rgba(var(--shadow-color-rgb), .22), 0 0 0 1px rgba(var(--accent-rgb), .2);
 }
 
 .vsai-msg-row.user .vsai-bubble:hover{
@@ -299,7 +299,7 @@
 
 .vsai-msg-row.user .vsai-bubble{
     background:var(--gradient-primary);
-    color:#ffffff;
+    color:var(--text-on-accent);
     border-bottom-right-radius:4px;
 }
 
@@ -514,7 +514,7 @@
     justify-content:center;
     background:var(--gradient-primary);
     border:none;
-    color:#ffffff;
+    color:var(--text-on-accent);
     cursor:pointer;
     transition:.2s;
 }

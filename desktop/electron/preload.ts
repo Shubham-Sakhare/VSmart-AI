@@ -165,7 +165,13 @@ pickIcon:(id:string)=>
 ipcRenderer.invoke("launcher:pickIcon",id),
 
 pickImage:()=>
-ipcRenderer.invoke("launcher:pickImage")
+ipcRenderer.invoke("launcher:pickImage"),
+
+pickAndAddCustomApp:()=>
+ipcRenderer.invoke("launcher:pickAndAddCustomApp"),
+
+launchPath:(filePath:string)=>
+ipcRenderer.invoke("launcher:launchPath",filePath)
 
 },
 

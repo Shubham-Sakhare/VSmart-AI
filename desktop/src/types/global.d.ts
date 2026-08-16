@@ -158,6 +158,16 @@ pinned:boolean;
 }[]>;
 
 pickImage:()=>Promise<string|null>;
+
+pickAndAddCustomApp:()=>Promise<{
+name:string;
+id:string;
+icon:string;
+customIcon?:string;
+pinned:boolean;
+}[]>;
+
+launchPath:(filePath:string)=>Promise<boolean>;
 };
 
 

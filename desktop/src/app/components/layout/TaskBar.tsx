@@ -11,7 +11,27 @@ import {
   AppWindow,
   Eye,
   EyeOff,
-  FolderOpen
+  FolderOpen,
+  Plus,
+  List,
+  HardDrive,
+  Globe,
+  Code2,
+  Calculator,
+  FileText,
+  Music,
+  Video,
+  Image as ImageIcon,
+  Mail,
+  MessageCircle,
+  Terminal,
+  Palette,
+  FileType,
+  Shield,
+  Gamepad2,
+  Camera,
+  Settings as SettingsIcon,
+  Folder as FolderIcon
 } from "lucide-react";
 import type { Page } from "./MainLayout";
 import type { VoiceControls } from "../../voice/useVoice";
@@ -40,6 +60,12 @@ interface LibraryApp {
   pinned: boolean;
 }
 
+interface WindowsAppLite {
+  name: string;
+  id: string;
+  icon: string;
+  path?: string;
+}
 
 const SYSTEM_BTN_ICON_KEY = "vsmart_system_btn_icon";
 const LAUNCHER_PINS_HIDDEN_KEY = "vsmart_launcher_pins_hidden";
@@ -49,11 +75,94 @@ const TASKBAR_POSITION_KEY = "vsmart_taskbar_position";
 
 type TaskbarPosition = "bottom" | "top" | "left" | "right";
 
-function AppIcon({ src, size = 28 }: { src?: string; size?: number }) {
+// Distinct fallback icon per app, matched by name keywords - so the System
+// Apps grid doesn't show the same generic square for every entry that has
+// no extracted icon (mirrors the same idea used for the Desktop Hub tiles).
+function appIconFallback(name: string) {
+  const n = (name || "").toLowerCase();
+
+  if (
+    n.includes("chrome") ||
+    n.includes("edge") ||
+    n.includes("firefox") ||
+    n.includes("brave") ||
+    n.includes("browser")
+  )
+    return <Globe size={20} />;
+  if (n.includes("code") || n.includes("studio") || n.includes("cursor") || n.includes("sublime") || n.includes("atom") || n.includes("dev"))
+    return <Code2 size={20} />;
+  if (n.includes("calc"))
+    return <Calculator size={20} />;
+  if (n.includes("word") || n.includes("writer") || n.includes("notepad") || n.includes("note"))
+    return <FileText size={20} />;
+  if (n.includes("excel") || n.includes("sheet") || n.includes("calc"))
+    return <FileType size={20} />;
+  if (n.includes("spotify") || n.includes("music") || n.includes("audio") || n.includes("player"))
+    return <Music size={20} />;
+  if (n.includes("vlc") || n.includes("video") || n.includes("movie") || n.includes("film"))
+    return <Video size={20} />;
+  if (n.includes("photoshop") || n.includes("illustrator") || n.includes("figma") || n.includes("canva") || n.includes("paint") || n.includes("image") || n.includes("photo"))
+    return <ImageIcon size={20} />;
+  if (n.includes("mail") || n.includes("outlook") || n.includes("thunderbird"))
+    return <Mail size={20} />;
+  if (n.includes("whatsapp") || n.includes("telegram") || n.includes("discord") || n.includes("chat") || n.includes("messeng"))
+    return <MessageCircle size={20} />;
+  if (n.includes("terminal") || n.includes("cmd") || n.includes("powershell") || n.includes("bash"))
+    return <Terminal size={20} />;
+  if (n.includes("adobe") || n.includes("design") || n.includes("draw"))
+    return <Palette size={20} />;
+  if (n.includes("pdf") || n.includes("acrobat") || n.includes("reader"))
+    return <FileType size={20} />;
+  if (n.includes("vpn") || n.includes("antivirus") || n.includes("secure") || n.includes("defender") || n.includes("lock"))
+    return <Shield size={20} />;
+  if (n.includes("steam") || n.includes("game") || n.includes("epic") || n.includes("xbox"))
+    return <Gamepad2 size={20} />;
+  if (n.includes("camera") || n.includes("webcam") || n.includes("obs"))
+    return <Camera size={20} />;
+  if (n.includes("setting") || n.includes("control panel") || n.includes("config"))
+    return <SettingsIcon size={20} />;
+  if (n.includes("explorer") || n.includes("file") || n.includes("folder"))
+    return <FolderIcon size={20} />;
+
+  return <AppWindow size={20} />;
+}
+
+// Desktop-Hub-style per-app coloring: each fallback tile gets its own hue
+// (derived deterministically from the app name) instead of every tile
+// sharing the same flat --accent tint. Kept as a soft glass background +
+// a saturated icon color, matching the Desktop Hub tile treatment.
+function appColorFromName(name: string) {
+  const str = name || "app";
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  const hue = Math.abs(hash) % 360;
+  return {
+    bg: `hsla(${hue}, 85%, 60%, 0.16)`,
+    border: `hsla(${hue}, 85%, 65%, 0.28)`,
+    fg: `hsl(${hue}, 90%, 72%)`,
+    glow: `hsla(${hue}, 90%, 60%, 0.35)`
+  };
+}
+
+function AppIcon({ src, name, size = 28 }: { src?: string; name?: string; size?: number }) {
   if (!src) {
+    const c = appColorFromName(name || "");
     return (
-      <div className="app-icon-fallback" style={{ width: size, height: size }}>
-        <AppWindow size={Math.round(size * 0.6)} />
+      <div
+        className="app-icon-fallback"
+        style={{
+          width: size,
+          height: size,
+          background: c.bg,
+          border: `1px solid ${c.border}`,
+          color: c.fg,
+          boxShadow: `0 0 12px ${c.glow}`
+        }}
+      >
+        {appIconFallback(name || "")}
       </div>
     );
   }
@@ -76,6 +185,17 @@ export default function TaskBar({ activePage, onNavigate, voice }: TaskBarProps)
   const [libraryLoading, setLibraryLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [vlogoSearch, setVlogoSearch] = useState("");
+
+  // "+" add-panels: pick from apps not currently shown in each list
+  const [addAppsOpen, setAddAppsOpen] = useState(false);
+  const [addingCustomApp, setAddingCustomApp] = useState(false);
+
+  // System Apps "+" panel: two-step (choose source, then pick from list)
+  const [addSystemOpen, setAddSystemOpen] = useState(false);
+  const [addSystemMode, setAddSystemMode] = useState<"menu" | "list">("menu");
+  const [installedApps, setInstalledApps] = useState<WindowsAppLite[]>([]);
+  const [installedLoading, setInstalledLoading] = useState(false);
+  const [addingFromListId, setAddingFromListId] = useState<string | null>(null);
 
   const [launcherState, setLauncherState] = useState<LauncherAppsState>(DEFAULT_LAUNCHER_STATE);
 
@@ -187,10 +307,24 @@ export default function TaskBar({ activePage, onNavigate, voice }: TaskBarProps)
       setLauncherMenuFor(null);
       setVlogoBtnMenuOpen(false);
       setSystemBtnMenuOpen(false);
+      setAddAppsOpen(false);
+      setAddSystemOpen(false);
+      setAddSystemMode("menu");
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
+
+  // Add-panels are per-modal; closing either modal should reset it so it
+  // doesn't stay open when the other modal is opened next.
+  useEffect(() => {
+    setAddAppsOpen(false);
+  }, [startOpen]);
+
+  useEffect(() => {
+    setAddSystemOpen(false);
+    setAddSystemMode("menu");
+  }, [libraryOpen]);
 
   const loadLauncherState = useCallback(() => {
     window.vsmart
@@ -250,23 +384,19 @@ export default function TaskBar({ activePage, onNavigate, voice }: TaskBarProps)
       .catch(() => setLibraryApps([]));
   }, []);
 
-  // Auto-sync: every installed app on the PC shows up in the "System Apps"
-  // panel by itself — no separate "add" step needed anywhere in Settings.
+  // NOTE: apps are no longer force-merged into the library just because the
+  // System Apps panel was opened - that used to make "not added yet" always
+  // empty. Installed apps are now only fetched for reference (used by the
+  // "+" -> "From List" flow below) and the user explicitly chooses what to
+  // add.
   useEffect(() => {
     if (!libraryOpen) return;
     let cancelled = false;
     setLibraryLoading(true);
-    Promise.all([window.vsmart.getInstalledApps(), window.vsmart.launcher.getLibraryApps()])
-      .then(async ([installed, existing]) => {
-        if (cancelled) return;
-        const existingIds = new Set(existing.map((a) => a.id));
-        const missing = installed.filter((a) => !existingIds.has(a.id));
-        if (missing.length > 0) {
-          const merged = await window.vsmart.launcher.addLibraryApps(missing);
-          if (!cancelled) setLibraryApps(merged);
-        } else {
-          setLibraryApps(existing);
-        }
+    window.vsmart.launcher
+      .getLibraryApps()
+      .then((apps) => {
+        if (!cancelled) setLibraryApps(apps);
       })
       .catch(() => {})
       .finally(() => {
@@ -276,6 +406,17 @@ export default function TaskBar({ activePage, onNavigate, voice }: TaskBarProps)
       cancelled = true;
     };
   }, [libraryOpen]);
+
+  // Lazily fetch the full installed-apps scan only when the user actually
+  // opens the "From List" step, so opening System Apps stays fast.
+  const loadInstalledApps = useCallback(() => {
+    setInstalledLoading(true);
+    window.vsmart
+      .getInstalledApps()
+      .then(setInstalledApps)
+      .catch(() => setInstalledApps([]))
+      .finally(() => setInstalledLoading(false));
+  }, []);
 
   useEffect(() => {
     if (!menuFor && !launcherMenuFor && !vlogoBtnMenuOpen && !systemBtnMenuOpen) return;
@@ -368,6 +509,13 @@ export default function TaskBar({ activePage, onNavigate, voice }: TaskBarProps)
     [launcherState.added]
   );
 
+  // Catalog entries NOT currently added - what the "+" panel in the VSmart
+  // Apps modal offers to bring back in.
+  const notAddedLauncherApps = useMemo(
+    () => LAUNCHER_CATALOG.filter((a) => !launcherState.added.includes(a.page)),
+    [launcherState.added]
+  );
+
   const filteredVlogoApps = useMemo(() => {
     const q = vlogoSearch.trim().toLowerCase();
     if (!q) return addedLauncherApps;
@@ -398,12 +546,90 @@ export default function TaskBar({ activePage, onNavigate, voice }: TaskBarProps)
     return libraryApps.filter((a) => a.name.toLowerCase().includes(q));
   }, [libraryApps, search]);
 
+  // Installed apps not yet in the library - what "+" -> "From List" offers.
+  const notAddedSystemApps = useMemo(() => {
+    const existingIds = new Set(libraryApps.map((a) => a.id));
+    return installedApps.filter((a) => !existingIds.has(a.id));
+  }, [installedApps, libraryApps]);
+
   const togglePin = useCallback((app: LibraryApp) => {
     window.vsmart.launcher
       .setPinned(app.id, !app.pinned)
       .then(setLibraryApps)
       .catch(() => {});
     setMenuFor(null);
+  }, []);
+
+  const addLauncherApp = useCallback(
+    (page: Page) => {
+      if (launcherState.added.includes(page)) return;
+      persistLauncherState({ ...launcherState, added: [...launcherState.added, page] });
+    },
+    [launcherState, persistLauncherState]
+  );
+
+  // Removes a VSmart app from the launcher: drops it from "added" and,
+  // if it was pinned to the taskbar, unpins it too.
+  const removeLauncherApp = useCallback(
+    (page: Page) => {
+      if (page === HOME_PAGE) return;
+      persistLauncherState({
+        ...launcherState,
+        added: launcherState.added.filter((p) => p !== page),
+        pinned: launcherState.pinned.filter((p) => p !== page)
+      });
+      setLauncherMenuFor(null);
+    },
+    [launcherState, persistLauncherState]
+  );
+
+  const handleAddCustomApp = useCallback(async () => {
+    setAddingCustomApp(true);
+    try {
+      const updated = await window.vsmart.launcher.pickAndAddCustomApp();
+      setLibraryApps(updated);
+    } catch {
+      /* ignore */
+    } finally {
+      setAddingCustomApp(false);
+      setAddSystemOpen(false);
+      setAddSystemMode("menu");
+    }
+  }, []);
+
+  const handleAddFromList = useCallback(async (app: WindowsAppLite) => {
+    setAddingFromListId(app.id);
+    try {
+      const updated = await window.vsmart.launcher.addLibraryApps([app]);
+      setLibraryApps(updated);
+    } catch {
+      /* ignore */
+    } finally {
+      setAddingFromListId(null);
+    }
+  }, []);
+
+  // Removes an app from the System Apps library entirely (also unpins it,
+  // since the taskbar row is just a filtered view of this same list).
+  const handleRemoveLibraryApp = useCallback((id: string) => {
+    window.vsmart.launcher
+      .removeLibraryApp(id)
+      .then(setLibraryApps)
+      .catch(() => {});
+    setMenuFor(null);
+  }, []);
+
+  const openAddSystemFromList = useCallback(() => {
+    setAddSystemMode("list");
+    loadInstalledApps();
+  }, [loadInstalledApps]);
+
+  const launchLibraryApp = useCallback((app: LibraryApp) => {
+    if (app.id.startsWith("custom:")) {
+      window.vsmart.launcher.launchPath(app.id.slice("custom:".length)).catch(() => {});
+    } else {
+      window.vsmart.launchSystemApp(app.id);
+    }
   }, []);
 
   const reorderSystemPinned = useCallback((draggedId: string, targetId: string) => {
@@ -448,15 +674,6 @@ export default function TaskBar({ activePage, onNavigate, voice }: TaskBarProps)
     setMenuFor(null);
   }, []);
 
-  const handleUnpinAndRemove = useCallback((id: string) => {
-    window.vsmart.launcher
-      .setPinned(id, false)
-      .then(() => window.vsmart.launcher.removeLibraryApp(id))
-      .then(setLibraryApps)
-      .catch(() => {});
-    setMenuFor(null);
-  }, []);
-
   const toggleLauncherPin = useCallback(
     (page: Page) => {
       const isPinned = launcherState.pinned.includes(page);
@@ -479,18 +696,6 @@ export default function TaskBar({ activePage, onNavigate, voice }: TaskBarProps)
       reordered.splice(fromIndex, 1);
       reordered.splice(toIndex, 0, draggedPage);
       persistLauncherState({ ...launcherState, pinned: reordered });
-    },
-    [launcherState, persistLauncherState]
-  );
-
-  const removeLauncherApp = useCallback(
-    (page: Page) => {
-      persistLauncherState({
-        ...launcherState,
-        added: launcherState.added.filter((p) => p !== page),
-        pinned: launcherState.pinned.filter((p) => p !== page)
-      });
-      setLauncherMenuFor(null);
     },
     [launcherState, persistLauncherState]
   );
@@ -554,16 +759,48 @@ export default function TaskBar({ activePage, onNavigate, voice }: TaskBarProps)
               </button>
             </div>
 
-            {addedLauncherApps.length > 4 && (
-              <div className="app-search">
-                <Search size={14} />
-                <input
-                  type="text"
-                  placeholder="Search VSmart apps..."
-                  value={vlogoSearch}
-                  onChange={(e) => setVlogoSearch(e.target.value)}
-                  autoFocus
-                />
+            <div className="app-search-row">
+              {addedLauncherApps.length > 4 && (
+                <div className="app-search">
+                  <Search size={14} />
+                  <input
+                    type="text"
+                    placeholder="Search VSmart apps..."
+                    value={vlogoSearch}
+                    onChange={(e) => setVlogoSearch(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+              )}
+              <button
+                type="button"
+                className={addAppsOpen ? "app-add-btn active" : "app-add-btn"}
+                onClick={() => setAddAppsOpen((v) => !v)}
+                title="Add apps"
+              >
+                <Plus size={15} />
+                <span>Add</span>
+              </button>
+            </div>
+
+            {addAppsOpen && (
+              <div className="add-apps-panel">
+                {notAddedLauncherApps.length === 0 ? (
+                  <div className="add-apps-empty">All VSmart apps are already added.</div>
+                ) : (
+                  notAddedLauncherApps.map((app) => (
+                    <button
+                      key={app.page}
+                      type="button"
+                      className="add-apps-row"
+                      onClick={() => addLauncherApp(app.page)}
+                    >
+                      {app.icon}
+                      <span>{app.label}</span>
+                      <Plus size={13} className="add-apps-row-plus" />
+                    </button>
+                  ))
+                )}
               </div>
             )}
 
@@ -603,9 +840,11 @@ export default function TaskBar({ activePage, onNavigate, voice }: TaskBarProps)
                         <button onClick={() => editLauncherIcon(app.page)}>
                           <Pencil size={13} /> Edit icon
                         </button>
-                        <button className="danger" onClick={() => removeLauncherApp(app.page)}>
-                          <Trash2 size={13} /> Remove
-                        </button>
+                        {!isHome && (
+                          <button className="danger" onClick={() => removeLauncherApp(app.page)}>
+                            <Trash2 size={13} /> Remove
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -626,36 +865,101 @@ export default function TaskBar({ activePage, onNavigate, voice }: TaskBarProps)
               </button>
             </div>
 
-            {libraryApps.length > 0 && (
-              <div className="app-search">
-                <Search size={14} />
-                <input
-                  type="text"
-                  placeholder="Search your apps..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
+            <div className="app-search-row">
+              {libraryApps.length > 0 && (
+                <div className="app-search">
+                  <Search size={14} />
+                  <input
+                    type="text"
+                    placeholder="Search your apps..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
+              )}
+              <button
+                type="button"
+                className={addSystemOpen ? "app-add-btn active" : "app-add-btn"}
+                onClick={() => {
+                  setAddSystemOpen((v) => !v);
+                  setAddSystemMode("menu");
+                }}
+                title="Add apps"
+              >
+                <Plus size={15} />
+                <span>Add</span>
+              </button>
+            </div>
+
+            {addSystemOpen && addSystemMode === "menu" && (
+              <div className="add-apps-panel add-apps-source-panel">
+                <button type="button" className="add-apps-row" onClick={openAddSystemFromList}>
+                  <List size={16} />
+                  <span>From List</span>
+                </button>
+                <button
+                  type="button"
+                  className="add-apps-row"
+                  onClick={handleAddCustomApp}
+                  disabled={addingCustomApp}
+                >
+                  <HardDrive size={16} />
+                  <span>{addingCustomApp ? "Adding..." : "From System"}</span>
+                </button>
+              </div>
+            )}
+
+            {addSystemOpen && addSystemMode === "list" && (
+              <div className="add-apps-panel">
+                <button
+                  type="button"
+                  className="add-apps-back"
+                  onClick={() => setAddSystemMode("menu")}
+                >
+                  ← Back
+                </button>
+                {installedLoading ? (
+                  <div className="add-apps-empty">Scanning installed apps...</div>
+                ) : notAddedSystemApps.length === 0 ? (
+                  <div className="add-apps-empty">
+                    All detected apps are already added. Try "From System" for others.
+                  </div>
+                ) : (
+                  notAddedSystemApps.map((app) => (
+                    <button
+                      key={app.id}
+                      type="button"
+                      className="add-apps-row"
+                      onClick={() => handleAddFromList(app)}
+                      disabled={addingFromListId === app.id}
+                    >
+                      <AppIcon src={app.icon} name={app.name} size={20} />
+                      <span>{app.name}</span>
+                      <Plus size={13} className="add-apps-row-plus" />
+                    </button>
+                  ))
+                )}
               </div>
             )}
 
             {libraryLoading && libraryApps.length === 0 ? (
               <div className="apps-loading">Loading installed apps...</div>
             ) : libraryApps.length === 0 ? (
-              <div className="apps-empty">No apps found on this PC.</div>
+              <div className="apps-empty">No apps added yet. Tap "Add" to bring some in.</div>
             ) : (
               <div className="start-grid">
                 {filteredLibraryApps.map((app) => (
                   <div className="pinned-app-wrap library-tile-wrap" key={app.id}>
                     <button
                       className="start-tile system-tile"
-                      onClick={() => window.vsmart.launchSystemApp(app.id)}
+                      onClick={() => launchLibraryApp(app)}
                       onContextMenu={(e) => {
                         e.preventDefault();
                         setMenuFor((prev) => (prev === app.id ? null : app.id));
                       }}
                       title={app.name}
                     >
-                      <AppIcon src={app.customIcon || app.icon} />
+                      <AppIcon src={app.customIcon || app.icon} name={app.name} />
                       <span>{app.name}</span>
                       {app.pinned && <span className="pinned-badge" title="Pinned to taskbar" />}
                     </button>
@@ -672,8 +976,8 @@ export default function TaskBar({ activePage, onNavigate, voice }: TaskBarProps)
                         <button onClick={() => handleOpenFileLocation(app.id)}>
                           <FolderOpen size={13} /> Open file location
                         </button>
-                        <button className="danger" onClick={() => handleUnpinAndRemove(app.id)}>
-                          <Trash2 size={13} /> Unpin & Remove
+                        <button className="danger" onClick={() => handleRemoveLibraryApp(app.id)}>
+                          <Trash2 size={13} /> Remove
                         </button>
                       </div>
                     )}
@@ -834,13 +1138,13 @@ export default function TaskBar({ activePage, onNavigate, voice }: TaskBarProps)
                       (draggedSystemAppId === app.id ? " dragging" : "")
                     }
                     title={app.name}
-                    onClick={() => window.vsmart.launchSystemApp(app.id)}
+                    onClick={() => launchLibraryApp(app)}
                     onContextMenu={(e) => {
                       e.preventDefault();
                       setMenuFor((prev) => (prev === app.id ? null : app.id));
                     }}
                   >
-                    <AppIcon src={app.customIcon || app.icon} size={22} />
+                    <AppIcon src={app.customIcon || app.icon} name={app.name} size={22} />
                     <span className="running-dot" />
                   </button>
 
@@ -855,8 +1159,8 @@ export default function TaskBar({ activePage, onNavigate, voice }: TaskBarProps)
                       <button onClick={() => handleOpenFileLocation(app.id)}>
                         <FolderOpen size={13} /> Open file location
                       </button>
-                      <button className="danger" onClick={() => handleUnpinAndRemove(app.id)}>
-                        <Trash2 size={13} /> Unpin & Remove
+                      <button className="danger" onClick={() => handleRemoveLibraryApp(app.id)}>
+                        <Trash2 size={13} /> Remove
                       </button>
                     </div>
                   )}

@@ -12,7 +12,7 @@
     border-radius:10px;
     background:rgba(255,220,80,.08);
     border:1px solid rgba(255,220,80,.25);
-    color:#ffdc80;
+    color:var(--warning);
     font-size:11px;
 }
 
@@ -23,7 +23,7 @@
 }
 
 .analysis-card{
-    background:rgba(8,20,38,.65);
+    background:rgba(var(--bg-panel-rgb), .65);
     border:1px solid rgba(0,255,255,.12);
     border-radius:16px;
     padding:18px;
@@ -39,13 +39,13 @@
     position:absolute;
     top:0; left:0; right:0;
     height:2px;
-    background:linear-gradient(90deg,#00e5ff,#a855f7,#ff2e9a);
+    background:linear-gradient(90deg,var(--accent),var(--accent-2),var(--accent-3));
     opacity:.7;
 }
 
 .analysis-card:hover{
-    border-color:rgba(0,229,255,.3);
-    box-shadow:0 8px 30px rgba(0,229,255,.12);
+    border-color:rgba(var(--accent-rgb), .3);
+    box-shadow:0 8px 30px rgba(var(--accent-rgb), .12);
     transform:translateY(-2px);
 }
 
@@ -59,17 +59,17 @@
 .analysis-label{
     font-size:12px;
     letter-spacing:.5px;
-    color:#8fdfff;
+    color:var(--text-dim);
     text-transform:uppercase;
 }
 
-.trend-up{ color:#00ff9c; }
+.trend-up{ color:var(--success); }
 .trend-down{ color:#ff8080; }
 
 .analysis-price{
     font-size:20px;
     font-weight:700;
-    color:#e8f7fc;
+    color:var(--text-primary);
     margin-bottom:4px;
 }
 
@@ -78,11 +78,11 @@
     font-weight:600;
 }
 
-.analysis-change.up{ color:#00ff9c; }
+.analysis-change.up{ color:var(--success); }
 .analysis-change.down{ color:#ff8080; }
 
 .analysis-loading{
-    color:#5f8fa3;
+    color:var(--text-muted);
     font-size:12px;
     text-align:center;
     padding:20px 0;
@@ -90,14 +90,14 @@
 }
 
 .analysis-card.active{
-    border-color:#00d9ff;
-    box-shadow:0 0 20px rgba(0,229,255,.25);
+    border-color:var(--accent);
+    box-shadow:0 0 20px rgba(var(--accent-rgb), .25);
 }
 
 /* Inline panel (replaces the old modal) */
 .analysis-inline-panel{
-    background:linear-gradient(180deg,rgba(8,20,38,.85),rgba(4,10,20,.9));
-    border:1px solid rgba(0,229,255,.2);
+    background:linear-gradient(180deg,rgba(var(--bg-panel-rgb), .85),rgba(4,10,20,.9));
+    border:1px solid rgba(var(--accent-rgb), .2);
     border-radius:18px;
     padding:20px;
     animation:panel-in .25s ease;
@@ -123,21 +123,21 @@
     gap:8px;
     font-size:14px;
     font-weight:600;
-    color:#8fdfff;
+    color:var(--text-dim);
 }
 
 .chart-legend{
     display:flex;
     gap:16px;
     font-size:11px;
-    color:#8fb8cc;
+    color:var(--text-muted);
 }
 
 .timeframe-selector{
     display:flex;
     gap:4px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(0,229,255,.12);
+    background:rgba(var(--border-rgb), .03);
+    border:1px solid rgba(var(--accent-rgb), .12);
     border-radius:10px;
     padding:3px;
 }
@@ -149,18 +149,18 @@
     background:transparent;
     border:none;
     border-radius:7px;
-    color:#7fb8cc;
+    color:var(--text-muted);
     cursor:pointer;
     transition:.2s;
 }
 
 .tf-btn.active{
-    background:linear-gradient(90deg,#00c8ff33,#a855f733);
-    color:#fff;
+    background:linear-gradient(90deg,#00c8ff33,var(--accent-2)33);
+    color:var(--text-on-accent);
 }
 
 .tf-btn:hover{
-    color:#fff;
+    color:var(--text-on-accent);
 }
 
 .chart-legend span{
@@ -177,7 +177,7 @@
 
 .refresh-note{
     font-size:10px;
-    color:#5f8fa3;
+    color:var(--text-muted);
     font-weight:400;
     margin-left:8px;
 }
@@ -186,27 +186,27 @@
 .wick-up, .wick-down{
     stroke-width:1.5;
 }
-.wick-up{ stroke:#00ff9c; }
-.wick-down{ stroke:#ff5c86; }
+.wick-up{ stroke:var(--success); }
+.wick-down{ stroke:var(--danger); }
 
-.body-up{ fill:#00ff9c; }
-.body-down{ fill:#ff5c86; }
+.body-up{ fill:var(--success); }
+.body-down{ fill:var(--danger); }
 
 /* Support / resistance */
 .line-resistance{
-    stroke:#ff5c86;
+    stroke:var(--danger);
     stroke-width:1;
     stroke-dasharray:4 4;
     opacity:.7;
 }
 .line-support{
-    stroke:#00ff9c;
+    stroke:var(--success);
     stroke-width:1;
     stroke-dasharray:4 4;
     opacity:.7;
 }
 .line-current{
-    stroke:#00d9ff;
+    stroke:var(--accent);
     stroke-width:1;
     stroke-dasharray:2 3;
     opacity:.6;
@@ -216,11 +216,11 @@
     font-size:11px;
     font-weight:600;
 }
-.tag-resistance{ fill:#ff5c86; }
-.tag-support{ fill:#00ff9c; }
+.tag-resistance{ fill:var(--danger); }
+.tag-support{ fill:var(--success); }
 
 .current-price-box{
-    fill:#00d9ff;
+    fill:var(--accent);
 }
 .current-price-text{
     font-size:11px;
@@ -231,12 +231,12 @@
 /* Buy/sell circles on chart */
 .signal-circle-buy{
     fill:#00c853;
-    stroke:#00ff9c;
+    stroke:var(--success);
     stroke-width:2;
 }
 .signal-circle-sell{
-    fill:#e53950;
-    stroke:#ff5c86;
+    fill:var(--danger);
+    stroke:var(--danger);
     stroke-width:2;
 }
 
@@ -254,12 +254,12 @@
 }
 
 .latest-signal-card.buy{
-    background:rgba(0,255,156,.08);
-    border-color:rgba(0,255,156,.3);
+    background:rgba(var(--success-rgb), .08);
+    border-color:rgba(var(--success-rgb), .3);
 }
 .latest-signal-card.sell{
-    background:rgba(255,80,80,.08);
-    border-color:rgba(255,80,80,.3);
+    background:rgba(var(--danger-rgb), .08);
+    border-color:rgba(var(--danger-rgb), .3);
 }
 
 .latest-signal-type{
@@ -271,7 +271,7 @@
     letter-spacing:.5px;
 }
 
-.latest-signal-card.buy .latest-signal-type{ color:#00ff9c; }
+.latest-signal-card.buy .latest-signal-type{ color:var(--success); }
 .latest-signal-card.sell .latest-signal-type{ color:#ff8080; }
 
 .latest-signal-levels{
@@ -287,12 +287,12 @@
 
 .latest-signal-levels span{
     font-size:10px;
-    color:#8fb8cc;
+    color:var(--text-muted);
 }
 
 .latest-signal-levels strong{
     font-size:14px;
-    color:#e8f7fc;
+    color:var(--text-primary);
 }
 
 .analysis-indicators{
@@ -308,19 +308,19 @@
     gap:4px;
     padding:10px;
     border-radius:10px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.06);
+    background:rgba(var(--border-rgb), .03);
+    border:1px solid rgba(var(--border-rgb), .06);
     text-align:center;
 }
 
 .indicator span{
     font-size:10px;
-    color:#6ea8c6;
+    color:var(--text-muted);
 }
 
 .indicator strong{
     font-size:15px;
-    color:#e8f7fc;
+    color:var(--text-primary);
 }
 
 .indicator.signal-box{
@@ -328,17 +328,17 @@
     border-style:solid;
 }
 
-.signal-bullish{ background:rgba(0,255,156,.12) !important; border-color:rgba(0,255,156,.3) !important; }
-.signal-bullish strong{ color:#00ff9c; }
+.signal-bullish{ background:rgba(var(--success-rgb), .12) !important; border-color:rgba(var(--success-rgb), .3) !important; }
+.signal-bullish strong{ color:var(--success); }
 
-.signal-bearish{ background:rgba(255,80,80,.12) !important; border-color:rgba(255,80,80,.3) !important; }
+.signal-bearish{ background:rgba(var(--danger-rgb), .12) !important; border-color:rgba(var(--danger-rgb), .3) !important; }
 .signal-bearish strong{ color:#ff8080; }
 
-.signal-neutral{ background:rgba(255,255,255,.06) !important; }
-.signal-neutral strong{ color:#b8d4e0; }
+.signal-neutral{ background:rgba(var(--border-rgb), .06) !important; }
+.signal-neutral strong{ color:var(--text-muted); }
 
 .analysis-modal-note{
     font-size:11px;
-    color:#6ea8c6;
+    color:var(--text-muted);
     line-height:1.5;
 }
