@@ -648,24 +648,25 @@ export default function CommandCenter({
           {showPlaces && (
             <div className={`places-panel ${placesCollapsed ? "collapsed" : ""}`}>
               {/* Arrow always on border center */}
-              <div className="places-panel-header">
-                <button
-                  type="button"
-                  className="places-collapse-btn"
-                  title={placesCollapsed ? "Show Places" : "Hide Places"}
-                  onClick={() => setPlacesCollapsed((v) => !v)}
-                >
-                  {placesCollapsed ? (
-                    <ChevronRight size={14} />
-                  ) : (
-                    <ChevronLeft size={14} />
-                  )}
-                </button>
-              </div>
+                <div className="places-panel-header">
+                  <button
+                    type="button"
+                    className="places-collapse-btn"
+                    title={placesCollapsed ? "Show Places" : "Hide Places"}
+                    onClick={() => setPlacesCollapsed((v) => !v)}
+                  >
+                    {placesCollapsed ? (
+                      <ChevronRight size={14} />
+                    ) : (
+                      <ChevronLeft size={14} />
+                    )}
+                  </button>
+                </div>
 
               {!placesCollapsed && (
                 <>
                   <div className="places-section-title">Places</div>
+
                   <div className="places-list">
                     {places.map((p) => (
                       <HubTile
