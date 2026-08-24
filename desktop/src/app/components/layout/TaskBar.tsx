@@ -75,9 +75,6 @@ const TASKBAR_POSITION_KEY = "vsmart_taskbar_position";
 
 type TaskbarPosition = "bottom" | "top" | "left" | "right";
 
-// Distinct fallback icon per app, matched by name keywords - so the System
-// Apps grid doesn't show the same generic square for every entry that has
-// no extracted icon (mirrors the same idea used for the Desktop Hub tiles).
 function appIconFallback(name: string) {
   const n = (name || "").toLowerCase();
 
@@ -127,10 +124,6 @@ function appIconFallback(name: string) {
   return <AppWindow size={20} />;
 }
 
-// Desktop-Hub-style per-app coloring: each fallback tile gets its own hue
-// (derived deterministically from the app name) instead of every tile
-// sharing the same flat --accent tint. Kept as a soft glass background +
-// a saturated icon color, matching the Desktop Hub tile treatment.
 function appColorFromName(name: string) {
   const str = name || "app";
   let hash = 0;
@@ -186,11 +179,9 @@ export default function TaskBar({ activePage, onNavigate, voice }: TaskBarProps)
   const [search, setSearch] = useState("");
   const [vlogoSearch, setVlogoSearch] = useState("");
 
-  // "+" add-panels: pick from apps not currently shown in each list
   const [addAppsOpen, setAddAppsOpen] = useState(false);
   const [addingCustomApp, setAddingCustomApp] = useState(false);
 
-  // System Apps "+" panel: two-step (choose source, then pick from list)
   const [addSystemOpen, setAddSystemOpen] = useState(false);
   const [addSystemMode, setAddSystemMode] = useState<"menu" | "list">("menu");
   const [installedApps, setInstalledApps] = useState<WindowsAppLite[]>([]);
@@ -223,7 +214,6 @@ export default function TaskBar({ activePage, onNavigate, voice }: TaskBarProps)
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const taskbarRef = useRef<HTMLElement | null>(null);
 
-  // Body pe position set – Talk to VSmart / floating UI ke liye
   useEffect(() => {
     document.body.setAttribute("data-taskbar-pos", position);
     return () => {
@@ -231,15 +221,11 @@ export default function TaskBar({ activePage, onNavigate, voice }: TaskBarProps)
     };
   }, [position]);
 
-  // Taskbar ka actual size (width jab left/right, height jab top/bottom) measure karke
-  // body pe --taskbar-size set karna – layout isi se apni jagah adjust karta hai.
   useEffect(() => {
     const el = taskbarRef.current;
     if (!el) return;
 
     const applySize = () => {
-      // Auto-hide + currently hidden → taskbar screen se bahar hai, layout ko jagah
-      // reserve karne ki zarurat nahi.
       if (autoHide && taskbarHidden) {
         document.body.style.setProperty("--taskbar-size", "0px");
         return;
@@ -266,7 +252,6 @@ export default function TaskBar({ activePage, onNavigate, voice }: TaskBarProps)
     };
   }, []);
 
-  // Settings se live update
   useEffect(() => {
     const onSettings = (e: Event) => {
       const detail = (e as CustomEvent).detail || {};
@@ -315,8 +300,6 @@ export default function TaskBar({ activePage, onNavigate, voice }: TaskBarProps)
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  // Add-panels are per-modal; closing either modal should reset it so it
-  // doesn't stay open when the other modal is opened next.
   useEffect(() => {
     setAddAppsOpen(false);
   }, [startOpen]);
@@ -384,11 +367,6 @@ export default function TaskBar({ activePage, onNavigate, voice }: TaskBarProps)
       .catch(() => setLibraryApps([]));
   }, []);
 
-  // NOTE: apps are no longer force-merged into the library just because the
-  // System Apps panel was opened - that used to make "not added yet" always
-  // empty. Installed apps are now only fetched for reference (used by the
-  // "+" -> "From List" flow below) and the user explicitly chooses what to
-  // add.
   useEffect(() => {
     if (!libraryOpen) return;
     let cancelled = false;
@@ -407,8 +385,6 @@ export default function TaskBar({ activePage, onNavigate, voice }: TaskBarProps)
     };
   }, [libraryOpen]);
 
-  // Lazily fetch the full installed-apps scan only when the user actually
-  // opens the "From List" step, so opening System Apps stays fast.
   const loadInstalledApps = useCallback(() => {
     setInstalledLoading(true);
     window.vsmart
@@ -509,8 +485,6 @@ export default function TaskBar({ activePage, onNavigate, voice }: TaskBarProps)
     [launcherState.added]
   );
 
-  // Catalog entries NOT currently added - what the "+" panel in the VSmart
-  // Apps modal offers to bring back in.
   const notAddedLauncherApps = useMemo(
     () => LAUNCHER_CATALOG.filter((a) => !launcherState.added.includes(a.page)),
     [launcherState.added]
@@ -546,7 +520,6 @@ export default function TaskBar({ activePage, onNavigate, voice }: TaskBarProps)
     return libraryApps.filter((a) => a.name.toLowerCase().includes(q));
   }, [libraryApps, search]);
 
-  // Installed apps not yet in the library - what "+" -> "From List" offers.
   const notAddedSystemApps = useMemo(() => {
     const existingIds = new Set(libraryApps.map((a) => a.id));
     return installedApps.filter((a) => !existingIds.has(a.id));
@@ -568,8 +541,6 @@ export default function TaskBar({ activePage, onNavigate, voice }: TaskBarProps)
     [launcherState, persistLauncherState]
   );
 
-  // Removes a VSmart app from the launcher: drops it from "added" and,
-  // if it was pinned to the taskbar, unpins it too.
   const removeLauncherApp = useCallback(
     (page: Page) => {
       if (page === HOME_PAGE) return;
@@ -609,8 +580,6 @@ export default function TaskBar({ activePage, onNavigate, voice }: TaskBarProps)
     }
   }, []);
 
-  // Removes an app from the System Apps library entirely (also unpins it,
-  // since the taskbar row is just a filtered view of this same list).
   const handleRemoveLibraryApp = useCallback((id: string) => {
     window.vsmart.launcher
       .removeLibraryApp(id)
@@ -654,8 +623,6 @@ export default function TaskBar({ activePage, onNavigate, voice }: TaskBarProps)
       return fullOrder.map((id) => byId.get(id)!).filter(Boolean);
     });
   }, []);
-
-
 
   const handleEditIcon = useCallback((id: string) => {
     window.vsmart.launcher

@@ -11,7 +11,7 @@ import {
   loadHubSettings,
   clampHubValue,
   type HubSettings
-} from "../dashboard/CommandCenter";
+} from "../dashboard/hubSettings";
 import "./SettingsPanel.css";
 
 interface SidebarItem {
@@ -114,7 +114,7 @@ export default function SettingsPanel({
   if (!open) return null;
 
   const updateHubSettings = (patch: Partial<HubSettings>) => {
-    setHubSettingsState((prev) => {
+    setHubSettingsState((prev: HubSettings) => {
       const next = { ...prev, ...patch };
       try {
         localStorage.setItem(HUB_SETTINGS_KEY, JSON.stringify(next));

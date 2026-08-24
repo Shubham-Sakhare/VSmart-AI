@@ -537,53 +537,11 @@
   flex-shrink: 0;
 }
 
-.add-apps-row:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
 .add-apps-empty {
   padding: 14px 10px;
   text-align: center;
   font-size: 12px;
   color: #5f8ea3;
-}
-
-/* System Apps "+" source-choice step: two side-by-side option tiles
-   ("From List" / "From System") instead of the stacked app rows. */
-.add-apps-source-panel {
-  flex-direction: row;
-  gap: 8px;
-}
-
-.add-apps-source-panel .add-apps-row {
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 16px 10px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-}
-
-.add-apps-source-panel .add-apps-row:hover {
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-  border-color: color-mix(in srgb, var(--accent) 25%, transparent);
-}
-
-.add-apps-back {
-  align-self: flex-start;
-  background: none;
-  border: none;
-  color: var(--accent);
-  font-size: 12px;
-  cursor: pointer;
-  padding: 4px 6px;
-  margin-bottom: 2px;
-}
-
-.add-apps-back:hover {
-  text-decoration: underline;
 }
 
 .app-search input {
@@ -770,4 +728,49 @@ body[data-taskbar-pos="right"] .bottombar,
 body[data-taskbar-pos="right"] .talk-btn,
 body[data-taskbar-pos="right"] .chat-launcher {
   bottom: 20px !important;
+}
+.add-apps-source-panel {
+  flex-direction: row;
+  gap: 8px;
+}
+
+.add-apps-source-panel .add-apps-row {
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 10px;
+  text-align: center;
+}
+
+.add-apps-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  margin-bottom: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background .15s, color .15s;
+}
+
+.add-apps-back:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+.add-apps-row:disabled {
+  opacity: .5;
+  cursor: default;
+}
+
+.pinned-app-menu .danger {
+  color: #ff8080;
+}
+
+.pinned-app-menu .danger:hover {
+  background: rgba(255, 80, 80, 0.1);
 }

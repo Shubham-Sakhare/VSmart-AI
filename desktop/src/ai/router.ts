@@ -7,7 +7,7 @@ import { visionAgent } from "../agents/visionAgent";
 import { fileSearchAgent } from "../agents/fileSearchAgent";
 import { desktopControlAgent } from "../agents/desktopControlAgent";
 import { speak } from "../app/voice/useVoice";
-import type { ReplyLang } from "../llm/openrouter";
+import type { ReplyLang, ChatHistoryMessage } from "../llm/openrouter";
 import type { Plan } from "./types";
 
 
@@ -168,7 +168,8 @@ const VSCODE_TRIGGER_WORDS = [
 
 export async function route(
   message: string,
-  lang: ReplyLang = "en"
+  lang: ReplyLang = "en",
+  history: ChatHistoryMessage[] = []
 ): Promise<RouteResult> {
 
   if (isBlocked(message)) {
@@ -417,7 +418,7 @@ export async function route(
 
       speak(template.ack[lang], lang === "hi" ? "hi-IN" : "en-IN");
 
-      const result = await codingAgent(command);
+      const result = await codingAgent(command, history);
 
       return {
         success: true,
@@ -428,7 +429,7 @@ export async function route(
 
     case "chat":
     default: {
-      const reply = await chatAgent(message, lang);
+      const reply = await chatAgent(message, lang, history);
 
       return {
         success: true,

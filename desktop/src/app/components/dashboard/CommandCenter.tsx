@@ -1,547 +1,69 @@
 import "./CommandCenter.css";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Message } from "../layout/MainLayout";
 import type { VoiceControls } from "../../voice/useVoice";
-import heartVideo from "../../../assets/vsmart-ai-videos/vsmart-heart.mp4";
 import DetailDrawer from "./DetailDrawer";
-
-import iconDocuments from "../../../assets/vsmart-ai-images/file-icons/documents.png";
-import iconDownloads from "../../../assets/vsmart-ai-images/file-icons/downloads.png";
-import iconMedia from "../../../assets/vsmart-ai-images/file-icons/Media.png";
-import iconMusics from "../../../assets/vsmart-ai-images/file-icons/Musics.png";
-import iconVideos from "../../../assets/vsmart-ai-images/file-icons/VIdeos.png";
+import AIOrb from "../orb/AIOrb";
 
 import {
-  Info,
-  TrendingUp,
-  TrendingDown,
-  RefreshCw,
-  Monitor,
-  Home,
-  Download,
-  FileText,
-  Image,
-  Music,
-  Video,
-  HardDrive,
-  Folder,
-  AppWindow,
-  File,
-  FileCode,
-  FileType,
-  Lock,
-  Film,
-  Package,
-  X,
-  Pencil,
-  ChevronLeft,
-  ChevronRight
+  Info, TrendingUp, TrendingDown, RefreshCw, Monitor,
+  ChevronLeft, ChevronRight, Search, ArrowDownAZ, Clock, X, ZoomIn
 } from "lucide-react";
+
+import type { DesktopItem } from "./desktopTypes";
+import { type HubSettings, loadHubSettings } from "./hubSettings";
+// TODO: hubSettings.ts doesn't currently export a save function — once you
+// add/confirm one (e.g. `saveHubSettings`), import it above and swap the
+// TODO block inside updateIconSize() below so slider changes persist to disk.
+import { loadCustomIcons, saveCustomIcons } from "./customIcons";
+import { useDesktopItems } from "./useDesktopItems";
+import { useMarketFeed } from "./useMarketFeed";
+import { HubTile } from "./HubTile";
 
 interface CommandCenterProps {
   messages: Message[];
   voice: VoiceControls;
+  isThinking?: boolean;
+  isSpeaking?: boolean;
 }
 
-interface DesktopItem {
-  name: string;
-  displayName: string;
-  path: string;
-  type: "folder" | "file" | "shortcut" | "app" | "place";
-  extension: string | null;
-  size: number | null;
-  modified: string | null;
-  placeId?: string;
+type SortMode = "name" | "recent";
+type ItemCategory = "Folders" | "Apps" | "Files";
+
+const APP_EXTENSIONS = new Set(["exe", "app", "msi", "lnk", "bat", "sh", "appimage"]);
+
+// Best-effort classification: prefers an explicit item.isDirectory /
+// item.type field if the DesktopItem shape provides one, otherwise falls
+// back to guessing from the file extension in the path/name.
+// NOTE: adjust the field names below if your DesktopItem type uses
+// different property names for "is this a folder" / "is this an app".
+function classifyItem(item: DesktopItem): ItemCategory {
+  const anyItem = item as unknown as { isDirectory?: boolean; type?: string };
+
+  if (anyItem.isDirectory === true) return "Folders";
+  if (anyItem.type === "folder" || anyItem.type === "directory") return "Folders";
+  if (anyItem.type === "app" || anyItem.type === "application") return "Apps";
+
+  const name = item.name || item.path || "";
+  const dotIndex = name.lastIndexOf(".");
+  if (dotIndex === -1) return "Folders"; // no extension → treat as folder
+  const ext = name.slice(dotIndex + 1).toLowerCase();
+  if (APP_EXTENSIONS.has(ext)) return "Apps";
+  return "Files";
 }
 
-const CUSTOM_ICONS_KEY = "vsmart_hub_custom_icons";
-export const HUB_SETTINGS_KEY = "vsmart_hub_settings";
-
-export interface HubSettings {
-  placesIconSize: number;
-  desktopTextSize: number;
-  desktopIconSize: number;
-  appsGridCols: number;
-  appsLayout: "grid" | "list";
-  showPlaces: boolean;
-  showDesktop: boolean;
-}
-
-export const DEFAULT_HUB_SETTINGS: HubSettings = {
-  placesIconSize: 22,
-  desktopTextSize: 10,
-  desktopIconSize: 48,
-  appsGridCols: 3,
-  appsLayout: "grid",
-  showPlaces: true,
-  showDesktop: true
-};
-
-export function clampHubValue(n: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, n));
-}
-
-// Kept as a local alias so the rest of this file doesn't need renaming.
-const clamp = clampHubValue;
-
-export function loadHubSettings(): HubSettings {
-  try {
-    const raw = localStorage.getItem(HUB_SETTINGS_KEY);
-    if (!raw) return { ...DEFAULT_HUB_SETTINGS };
-    const p = JSON.parse(raw);
-    return {
-      placesIconSize: clamp(Number(p.placesIconSize) || 22, 14, 36),
-      desktopTextSize: clamp(Number(p.desktopTextSize) || 10, 8, 16),
-      desktopIconSize: clamp(Number(p.desktopIconSize) || 48, 32, 72),
-      appsGridCols: clamp(Number(p.appsGridCols) || 3, 2, 6),
-      appsLayout: p.appsLayout === "list" ? "list" : "grid",
-      showPlaces: p.showPlaces !== false,
-      showDesktop: p.showDesktop !== false
-    };
-  } catch {
-    return { ...DEFAULT_HUB_SETTINGS };
-  }
-}
-
-function loadCustomIcons(): Record<string, string> {
-  try {
-    const raw = localStorage.getItem(CUSTOM_ICONS_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
-}
-
-function saveCustomIcons(map: Record<string, string>) {
-  try {
-    localStorage.setItem(CUSTOM_ICONS_KEY, JSON.stringify(map));
-  } catch {
-    /* ignore */
-  }
-}
-
-function DefaultIcon({ item, size = 22 }: { item: DesktopItem; size?: number }) {
-  const name = (item.displayName || item.name || "").toLowerCase();
-  const ext = (item.extension || "").toLowerCase().replace(".", "");
-
-  if (item.type === "place") {
-    const placeIconMap: Record<string, string> = {
-      documents: iconDocuments,
-      downloads: iconDownloads,
-      pictures: iconMedia,
-      music: iconMusics,
-      videos: iconVideos
-    };
-    const src = item.placeId ? placeIconMap[item.placeId] : undefined;
-    if (src) {
-      return (
-        <img
-          src={src}
-          alt=""
-          style={{ width: size, height: size, objectFit: "contain" }}
-          draggable={false}
-        />
-      );
-    }
-    switch (item.placeId) {
-      case "home":
-        return <Home size={size} />;
-      case "desktop":
-        return <HardDrive size={size} />;
-      default:
-        return <Folder size={size} />;
-    }
-  }
-
-  if (item.type === "folder") {
-    if (name.includes("document")) return <FileText size={size} />;
-    if (name.includes("download")) return <Download size={size} />;
-    if (name.includes("video")) return <Video size={size} />;
-    if (name.includes("picture") || name.includes("image") || name.includes("photo"))
-      return <Image size={size} />;
-    if (name.includes("music") || name.includes("audio")) return <Music size={size} />;
-    if (name.includes("app") || name.includes("program")) return <AppWindow size={size} />;
-    if (name.includes("secure") || name.includes("lock") || name.includes("private"))
-      return <Lock size={size} />;
-    return <Folder size={size} />;
-  }
-
-  if (item.type === "app" || item.type === "shortcut") {
-    if (
-      name.includes("illustrator") ||
-      name.includes("photoshop") ||
-      name.includes("figma") ||
-      name.includes("canva")
-    )
-      return <Image size={size} />;
-    if (name.includes("word") || name.includes("writer") || name.includes("document"))
-      return <FileText size={size} />;
-    if (name.includes("excel") || name.includes("calc") || name.includes("sheet"))
-      return <FileCode size={size} />;
-    if (name.includes("powerpoint") || name.includes("slide") || name.includes("impress"))
-      return <Package size={size} />;
-    if (name.includes("pdf") || name.includes("acrobat") || name.includes("reader"))
-      return <FileType size={size} />;
-    if (name.includes("mail") || name.includes("outlook") || name.includes("thunderbird"))
-      return <FileText size={size} />;
-    if (
-      name.includes("chrome") ||
-      name.includes("firefox") ||
-      name.includes("edge") ||
-      name.includes("brave")
-    )
-      return <AppWindow size={size} />;
-    if (
-      name.includes("vlc") ||
-      name.includes("player") ||
-      name.includes("spotify") ||
-      name.includes("music")
-    )
-      return <Music size={size} />;
-    if (name.includes("video") || name.includes("movie") || name.includes("film"))
-      return <Film size={size} />;
-    if (
-      name.includes("code") ||
-      name.includes("studio") ||
-      name.includes("cursor") ||
-      name.includes("sublime") ||
-      name.includes("atom") ||
-      name.includes("notepad")
-    )
-      return <FileCode size={size} />;
-    if (name.includes("launcher") || name.includes("start") || name.includes("manager"))
-      return <Package size={size} />;
-    if (
-      name.includes("lock") ||
-      name.includes("secure") ||
-      name.includes("vpn") ||
-      name.includes("antivirus")
-    )
-      return <Lock size={size} />;
-    return <AppWindow size={size} />;
-  }
-
-  if (["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "ico"].includes(ext))
-    return <Image size={size} />;
-  if (["mp4", "mkv", "avi", "mov", "wmv", "webm"].includes(ext)) return <Film size={size} />;
-  if (["mp3", "wav", "flac", "aac", "ogg"].includes(ext)) return <Music size={size} />;
-  if (ext === "pdf") return <FileType size={size} />;
-  if (["lock", "key", "pem", "crt", "cer", "p12"].includes(ext)) return <Lock size={size} />;
-  if (
-    ["js", "ts", "tsx", "jsx", "py", "java", "c", "cpp", "html", "css", "json", "xml"].includes(ext)
-  )
-    return <FileCode size={size} />;
-  if (["txt", "md", "log", "csv", "doc", "docx"].includes(ext)) return <FileText size={size} />;
-  if (
-    ["msi", "msix", "appx", "dmg", "pkg", "deb", "rpm", "apk", "exe", "bat", "cmd"].includes(ext)
-  )
-    return <Package size={size} />;
-
-  return <File size={size} />;
-}
-
-function placeColor(placeId?: string): string {
-  switch (placeId) {
-    case "home":
-      return "tile-blue";
-    case "documents":
-      return "tile-cyan";
-    case "downloads":
-      return "tile-green";
-    case "pictures":
-      return "tile-pink";
-    case "music":
-      return "tile-purple";
-    case "videos":
-      return "tile-orange";
-    case "desktop":
-      return "tile-teal";
-    default:
-      return "tile-default";
-  }
-}
-
-function desktopTileClass(item: DesktopItem): string {
-  if (item.type === "place") return placeColor(item.placeId);
-  const colors = [
-    "tile-blue",
-    "tile-cyan",
-    "tile-green",
-    "tile-pink",
-    "tile-purple",
-    "tile-orange",
-    "tile-teal"
-  ];
-  const key = (item.path || item.displayName || item.name || "").toLowerCase();
-  let hash = 0;
-  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) | 0;
-  return colors[Math.abs(hash) % colors.length];
-}
-
-function typeClass(item: DesktopItem): string {
-  return desktopTileClass(item);
-}
-
-function useDesktopItems() {
-  const [items, setItems] = useState<DesktopItem[]>([]);
-  const [places, setPlaces] = useState<DesktopItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-
-  const load = useCallback(async (force = false) => {
-    try {
-      setLoading(true);
-      const [desk, sysPlaces] = await Promise.all([
-        window.vsmart.system.getDesktopItems(force),
-        window.vsmart.system.getSystemPlaces()
-      ]);
-      setItems(Array.isArray(desk) ? desk : []);
-      setPlaces(Array.isArray(sysPlaces) ? sysPlaces : []);
-      setError(false);
-    } catch {
-      setError(true);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const [desk, sysPlaces] = await Promise.all([
-          window.vsmart.system.getDesktopItems(false),
-          window.vsmart.system.getSystemPlaces()
-        ]);
-        if (!cancelled) {
-          setItems(Array.isArray(desk) ? desk : []);
-          setPlaces(Array.isArray(sysPlaces) ? sysPlaces : []);
-          setError(false);
-        }
-      } catch {
-        if (!cancelled) setError(true);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    const interval = setInterval(() => {
-      if (!cancelled) load(false);
-    }, 60_000);
-
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [load]);
-
-  return { items, places, loading, error, refresh: () => load(true) };
-}
-
-interface MarketItem {
-  symbol: string;
-  label: string;
-  price: string;
-  changePercent: number;
-  up: boolean;
-}
-
-function useMarketFeed() {
-  const [feed, setFeed] = useState<MarketItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const data = await window.vsmart.getMarketFeed();
-        if (!cancelled) {
-          setFeed(data);
-          setLastUpdated(new Date());
-          setError(false);
-        }
-      } catch {
-        if (!cancelled) setError(true);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-    load();
-    const interval = setInterval(load, 60000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, []);
-
-  return { feed, loading, error, lastUpdated };
-}
-
-function HubTile({
-  item,
-  customIcon,
-  layout,
-  placesIconSize,
-  desktopTextSize,
-  desktopIconSize,
-  onOpen,
-  onIconChange,
-  onIconClear
-}: {
-  item: DesktopItem;
-  customIcon?: string;
-  layout: "place" | "desktop";
-  placesIconSize: number;
-  desktopTextSize: number;
-  desktopIconSize: number;
-  onOpen: () => void;
-  onIconChange: (dataUrl: string) => void;
-  onIconClear: () => void;
-}) {
-  const fileRef = useRef<HTMLInputElement>(null);
-  const iconSize =
-    layout === "place" ? placesIconSize : Math.round(desktopIconSize * 0.55);
-
-  const openEditPicker = () => fileRef.current?.click();
-
-  const onFilePicked = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !file.type.startsWith("image/")) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") onIconChange(reader.result);
-    };
-    reader.readAsDataURL(file);
-    e.target.value = "";
-  };
-
-  const iconNode = customIcon ? (
-    <img src={customIcon} alt="" className="tile-custom-img" draggable={false} />
-  ) : (
-    <DefaultIcon item={item} size={iconSize} />
-  );
-
-  const hiddenInput = (
-    <input
-      ref={fileRef}
-      type="file"
-      accept="image/*"
-      className="hub-file-input"
-      onChange={onFilePicked}
-    />
-  );
-
-  if (layout === "place") {
-    return (
-      <div className="hub-place-wrap">
-        <button
-          type="button"
-          className={`place-row ${typeClass(item)}`}
-          title={`${item.displayName}\nClick: open`}
-          onClick={(e) => {
-            e.preventDefault();
-            onOpen();
-          }}
-        >
-          <span
-            className="place-icon"
-            style={{
-              width: placesIconSize + 10,
-              height: placesIconSize + 10
-            }}
-          >
-            {iconNode}
-          </span>
-          <span className="place-name">{item.displayName}</span>
-
-          <span
-            className="tile-edit-btn place-edit-abs"
-            title="Change icon"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              openEditPicker();
-            }}
-          >
-            <Pencil size={11} />
-          </span>
-
-          {customIcon && (
-            <span
-              className="tile-reset-inline place-reset-abs"
-              title="Reset default icon"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onIconClear();
-              }}
-            >
-              <X size={11} />
-            </span>
-          )}
-        </button>
-        {hiddenInput}
-      </div>
-    );
-  }
-
-  return (
-    <div className="hub-desktop-wrap">
-      <button
-        type="button"
-        className={`icon-tile ${typeClass(item)}`}
-        title={`${item.displayName}\nClick: open`}
-        onClick={(e) => {
-          e.preventDefault();
-          onOpen();
-        }}
-      >
-        <span
-          className="tile-icon"
-          style={{ width: desktopIconSize, height: desktopIconSize }}
-        >
-          {iconNode}
-        </span>
-        <span className="tile-name" style={{ fontSize: desktopTextSize }}>
-          {item.displayName}
-        </span>
-
-        <span
-          className="tile-edit-btn tile-edit-float"
-          title="Change icon"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            openEditPicker();
-          }}
-        >
-          <Pencil size={11} />
-        </span>
-
-        {customIcon && (
-          <span
-            className="tile-reset-float"
-            title="Reset default icon"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onIconClear();
-            }}
-          >
-            <X size={11} />
-          </span>
-        )}
-      </button>
-      {hiddenInput}
-    </div>
-  );
+function groupByCategory(items: DesktopItem[]): Array<[ItemCategory, DesktopItem[]]> {
+  const order: ItemCategory[] = ["Folders", "Apps", "Files"];
+  const buckets: Record<ItemCategory, DesktopItem[]> = { Folders: [], Apps: [], Files: [] };
+  items.forEach((item) => buckets[classifyItem(item)].push(item));
+  return order.filter((cat) => buckets[cat].length > 0).map((cat) => [cat, buckets[cat]]);
 }
 
 export default function CommandCenter({
   messages,
-  voice: _voice
+  voice,
+  isThinking = false,
+  isSpeaking = false
 }: CommandCenterProps) {
   const { feed: marketFeed, loading: marketLoading, error: marketError, lastUpdated } =
     useMarketFeed();
@@ -559,6 +81,11 @@ export default function CommandCenter({
   );
   const [hubSettings, setHubSettings] = useState<HubSettings>(() => loadHubSettings());
   const [placesCollapsed, setPlacesCollapsed] = useState(false);
+  const [showZoomSlider, setShowZoomSlider] = useState(false);
+
+  const [query, setQuery] = useState("");
+  const [sortMode, setSortMode] = useState<SortMode>("name");
+  const [refreshedAt, setRefreshedAt] = useState<Date | null>(null);
 
   const [drawer, setDrawer] = useState<{
     open: boolean;
@@ -605,6 +132,45 @@ export default function CommandCenter({
     });
   };
 
+  const handleRefresh = async () => {
+    await refreshDesktop();
+    setRefreshedAt(new Date());
+  };
+
+  // Live icon-size slider — updates hub settings immediately (tiles resize
+  // as you drag) and broadcasts the change via the existing
+  // "vsmart-hub-settings" event so any other place reading hubSettings
+  // stays in sync. NOTE: this does NOT persist to disk yet — hubSettings.ts
+  // has no exported save function currently. Once one exists, call it here
+  // (see TODO near the import above) so the size survives a reload.
+  const updateIconSize = (size: number) => {
+    setHubSettings((prev) => {
+      const next = { ...prev, desktopIconSize: size };
+      window.dispatchEvent(new CustomEvent("vsmart-hub-settings", { detail: next }));
+      return next;
+    });
+  };
+
+  const visibleDesktopItems = useMemo(() => {
+    let list = desktopItems;
+
+    if (query.trim()) {
+      const q = query.trim().toLowerCase();
+      list = list.filter((item) => item.name.toLowerCase().includes(q));
+    }
+
+    if (sortMode === "name") {
+      list = [...list].sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    return list;
+  }, [desktopItems, query, sortMode]);
+
+  const groupedItems = useMemo(
+    () => (hubSettings.appsLayout === "list" ? groupByCategory(visibleDesktopItems) : null),
+    [visibleDesktopItems, hubSettings.appsLayout]
+  );
+
   const secondsAgo = lastUpdated
     ? Math.max(0, Math.round((Date.now() - lastUpdated.getTime()) / 1000))
     : null;
@@ -625,6 +191,34 @@ export default function CommandCenter({
     .filter(Boolean)
     .join(" ");
 
+  const orbState = voice.listening
+    ? "listening"
+    : isThinking
+    ? "thinking"
+    : isSpeaking
+    ? "speaking"
+    : "idle";
+
+  const renderTile = (item: DesktopItem) => (
+    <HubTile
+      key={item.path}
+      item={item}
+      layout="desktop"
+      placesIconSize={hubSettings.placesIconSize}
+      desktopTextSize={hubSettings.desktopTextSize}
+      desktopIconSize={hubSettings.desktopIconSize}
+      customIcon={customIcons[item.path]}
+      onOpen={() => openItem(item)}
+      onIconChange={(url) => setIconFor(item.path, url)}
+      onIconClear={() => clearIconFor(item.path)}
+    />
+  );
+
+  // Skeleton placeholders shown while the desktop is being scanned —
+  // count roughly matches a typical first grid so nothing visibly
+  // "jumps" once real tiles replace them.
+  const skeletonCount = hubSettings.appsLayout === "list" ? 5 : 9;
+
   return (
     <div className="command-center">
       <div className="cc-card ai-overview glass-panel cc-hub">
@@ -633,21 +227,85 @@ export default function CommandCenter({
             <Monitor size={15} />
           </span>
           <h3>DESKTOP HUB</h3>
+
+          {showDesktop && desktopItems.length > 0 && (
+            <span className="hub-item-count">{visibleDesktopItems.length}</span>
+          )}
+
+          {showDesktop && (
+            <div className="hub-zoom-wrap">
+              <button
+                type="button"
+                className={`hub-sort-btn ${showZoomSlider ? "active" : ""}`}
+                title="Icon size"
+                onClick={() => setShowZoomSlider((v) => !v)}
+              >
+                <ZoomIn size={13} />
+              </button>
+              {showZoomSlider && (
+                <div className="hub-zoom-popover">
+                  <input
+                    type="range"
+                    min={24}
+                    max={64}
+                    step={2}
+                    value={hubSettings.desktopIconSize}
+                    onChange={(e) => updateIconSize(Number(e.target.value))}
+                  />
+                  <span className="hub-zoom-value">{hubSettings.desktopIconSize}px</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {showDesktop && (
+            <button
+              type="button"
+              className={`hub-sort-btn ${sortMode === "name" ? "active" : ""}`}
+              title={sortMode === "name" ? "Sorted A–Z — click for recent" : "Sorted by recent — click for A–Z"}
+              onClick={() => setSortMode((m) => (m === "name" ? "recent" : "name"))}
+            >
+              {sortMode === "name" ? <ArrowDownAZ size={13} /> : <Clock size={13} />}
+            </button>
+          )}
+
           <button
             type="button"
             className="desktop-refresh-btn"
             title="Refresh"
-            onClick={() => refreshDesktop()}
+            onClick={handleRefresh}
             disabled={desktopLoading}
           >
             <RefreshCw size={13} className={desktopLoading ? "spin" : ""} />
           </button>
         </div>
 
+        {showDesktop && desktopItems.length > 0 && (
+          <div className="hub-search-row">
+            <Search size={13} className="hub-search-icon" />
+            <input
+              type="text"
+              className="hub-search-input"
+              placeholder="Search desktop..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            {query && (
+              <button
+                type="button"
+                className="hub-search-clear"
+                title="Clear search"
+                onClick={() => setQuery("")}
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+        )}
+
         <div className={splitClass}>
           {showPlaces && (
             <div className={`places-panel ${placesCollapsed ? "collapsed" : ""}`}>
-              {/* Arrow always on border center */}
                 <div className="places-panel-header">
                   <button
                     type="button"
@@ -690,77 +348,87 @@ export default function CommandCenter({
 
           {showDesktop && (
             <div className="apps-panel">
-              <div className="places-label">Desktop</div>
-              <div
-                className={`apps-grid-3 ${hubSettings.appsLayout === "list" ? "apps-list" : ""}`}
-                style={gridStyle}
-              >
-                {desktopLoading && desktopItems.length === 0 && (
-                  <div className="tile-empty">Scanning…</div>
-                )}
-                {desktopError && desktopItems.length === 0 && (
-                  <div className="tile-empty">Could not read Desktop</div>
-                )}
-                {!desktopLoading && !desktopError && desktopItems.length === 0 && (
-                  <div className="tile-empty">Desktop is empty</div>
-                )}
-
-                {desktopItems.slice(0, 12).map((item) => (
-                  <HubTile
-                    key={item.path}
-                    item={item}
-                    layout="desktop"
-                    placesIconSize={hubSettings.placesIconSize}
-                    desktopTextSize={hubSettings.desktopTextSize}
-                    desktopIconSize={hubSettings.desktopIconSize}
-                    customIcon={customIcons[item.path]}
-                    onOpen={() => openItem(item)}
-                    onIconChange={(url) => setIconFor(item.path, url)}
-                    onIconClear={() => clearIconFor(item.path)}
-                  />
-                ))}
-
-                {desktopItems.length > 12 && (
-                  <button
-                    type="button"
-                    className="icon-tile tile-more"
-                    onClick={() =>
-                      openDrawer(
-                        "Desktop",
-                        <div
-                          className={`apps-grid-3 drawer-grid ${hubSettings.appsLayout === "list" ? "apps-list" : ""}`}
-                          style={gridStyle}
-                        >
-                          {desktopItems.map((item) => (
-                            <HubTile
-                              key={item.path}
-                              item={item}
-                              layout="desktop"
-                              placesIconSize={hubSettings.placesIconSize}
-                              desktopTextSize={hubSettings.desktopTextSize}
-                              desktopIconSize={hubSettings.desktopIconSize}
-                              customIcon={customIcons[item.path]}
-                              onOpen={() => openItem(item)}
-                              onIconChange={(url) => setIconFor(item.path, url)}
-                              onIconClear={() => clearIconFor(item.path)}
-                            />
-                          ))}
-                        </div>
-                      )
-                    }
-                  >
-                    <span className="tile-icon more-count">
-                      +{desktopItems.length - 12}
-                    </span>
-                    <span
-                      className="tile-name"
-                      style={{ fontSize: hubSettings.desktopTextSize }}
-                    >
-                      More
-                    </span>
-                  </button>
+              <div className="places-label">
+                Desktop
+                {refreshedAt && (
+                  <span className="hub-refreshed-at">
+                    · refreshed {refreshedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </span>
                 )}
               </div>
+
+              {desktopLoading && desktopItems.length === 0 ? (
+                <div
+                  className={`apps-grid-3 ${hubSettings.appsLayout === "list" ? "apps-list" : ""}`}
+                  style={gridStyle}
+                >
+                  {Array.from({ length: skeletonCount }).map((_, i) => (
+                    <div key={i} className="skeleton-tile">
+                      <div className="skeleton-icon" />
+                      <div className="skeleton-line" />
+                    </div>
+                  ))}
+                </div>
+              ) : desktopError && desktopItems.length === 0 ? (
+                <div className="apps-grid-3" style={gridStyle}>
+                  <div className="tile-empty tile-empty-error">
+                    <span>Could not read Desktop</span>
+                    <button type="button" onClick={handleRefresh}>Retry</button>
+                  </div>
+                </div>
+              ) : !desktopLoading && !desktopError && desktopItems.length === 0 ? (
+                <div className="apps-grid-3" style={gridStyle}>
+                  <div className="tile-empty">Desktop is empty</div>
+                </div>
+              ) : visibleDesktopItems.length === 0 ? (
+                <div className="apps-grid-3" style={gridStyle}>
+                  <div className="tile-empty">No items match "{query}"</div>
+                </div>
+              ) : groupedItems ? (
+                // ---- List view: grouped by Folders / Apps / Files ----
+                <div className="apps-grouped-scroll">
+                  {groupedItems.map(([category, items]) => (
+                    <div key={category} className="hub-category-group">
+                      <div className="hub-category-title">
+                        {category} <span className="hub-category-count">{items.length}</span>
+                      </div>
+                      <div className="apps-grid-3 apps-list" style={gridStyle}>
+                        {items.map(renderTile)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                // ---- Grid view: flat, with "+N More" ----
+                <div className="apps-grid-3" style={gridStyle}>
+                  {visibleDesktopItems.slice(0, 12).map(renderTile)}
+
+                  {visibleDesktopItems.length > 12 && (
+                    <button
+                      type="button"
+                      className="icon-tile tile-more"
+                      onClick={() =>
+                        openDrawer(
+                          "Desktop",
+                          <div className="apps-grid-3 drawer-grid" style={gridStyle}>
+                            {visibleDesktopItems.map(renderTile)}
+                          </div>
+                        )
+                      }
+                    >
+                      <span className="tile-icon more-count">
+                        +{visibleDesktopItems.length - 12}
+                      </span>
+                      <span
+                        className="tile-name"
+                        style={{ fontSize: hubSettings.desktopTextSize }}
+                      >
+                        More
+                      </span>
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -768,14 +436,10 @@ export default function CommandCenter({
 
       <div className="cc-center">
         <div className="cc-card orb-card">
-          <div className="globe-wrap video-mode">
-            <video
-              className="orb-video"
-              src={heartVideo}
-              autoPlay
-              loop
-              muted
-              playsInline
+          <div className="globe-wrap">
+            <AIOrb
+              state={orbState}
+              caption={voice.listening ? voice.interimText : undefined}
             />
           </div>
           <h1>VSMART</h1>
@@ -800,7 +464,17 @@ export default function CommandCenter({
             <p className="feed-updated">Updated {secondsAgo}s ago</p>
           )}
           {marketLoading && marketFeed.length === 0 && (
-            <p className="feed-loading">Loading market data...</p>
+            <div className="feed-skeleton-list">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="feed-skeleton-item">
+                  <div className="skeleton-icon feed-skeleton-icon" />
+                  <div className="feed-skeleton-lines">
+                    <div className="skeleton-line feed-skeleton-line-wide" />
+                    <div className="skeleton-line feed-skeleton-line-narrow" />
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
           {marketError && marketFeed.length === 0 && (
             <div className="feed-error">

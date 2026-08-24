@@ -1,4 +1,5 @@
 ﻿import { askQwenCoder, askQwenCoderProject, askQwenCoderReview } from "../llm/openrouter";
+import type { ChatHistoryMessage } from "../llm/openrouter";
 
 interface ProjectFile {
   path: string;
@@ -20,6 +21,19 @@ interface ReviewPlan {
 // "find bugs" or "run npm install" know which folder to act on without
 // the user having to repeat the path every time.
 let lastProjectPath: string | null = null;
+
+// Turns the last few chat turns into a short plain-text context block, so
+// follow-ups like "add sum functionality" or "now do multiplication" know
+// what language/file was just being discussed — without needing to change
+// the structured JSON contract the project-planning prompt relies on.
+function historyToContext(history: ChatHistoryMessage[]): string {
+  if (history.length === 0) return "";
+  const recent = history.slice(-6);
+  const lines = recent.map(
+    h => `${h.role === "user" ? "User" : "Assistant"}: ${h.content.slice(0, 400)}`
+  );
+  return `Recent conversation context (use this to understand follow-up requests like "add X to it" or "now do Y"):\n${lines.join("\n")}\n\n`;
+}
 
 function stripFences(raw: string): string {
   const fenced = raw.match(/```[a-zA-Z]*\n([\s\S]*?)```/);
@@ -129,16 +143,17 @@ async function handleFindBugs(prompt: string): Promise<string> {
   return plan.summary || "No bugs found.";
 }
 
-async function handleCreateProject(prompt: string): Promise<string> {
-  const raw = await askQwenCoderProject(prompt);
+async function handleCreateProject(prompt: string, history: ChatHistoryMessage[]): Promise<string> {
+  const context = historyToContext(history);
+  const raw = await askQwenCoderProject(context + prompt);
   const plan = safeParseJson<ProjectPlan>(raw);
 
   if (!plan || !plan.files || plan.files.length === 0) {
     // Fall back to the old single-file behaviour if structured generation
     // didn't come back clean, so the request still produces something.
-    const language = detectLanguage(prompt);
+    const language = detectLanguage(context + prompt);
     const filename = extractFilename(prompt);
-    const code = await askQwenCoder("Write only the code for this request, no explanation: " + prompt);
+    const code = await askQwenCoder(context + "Write only the code for this request, no explanation: " + prompt);
     return await window.vsmart.writeCode(code, language, filename);
   }
 
@@ -169,7 +184,10 @@ async function handleCreateProject(prompt: string): Promise<string> {
   return parts.join("\n");
 }
 
-export async function codingAgent(prompt: string): Promise<string> {
+export async function codingAgent(
+  prompt: string,
+  history: ChatHistoryMessage[] = []
+): Promise<string> {
   try {
     if (/\b(cmd|command|terminal)\b/i.test(prompt) && /\b(run|chalao|chala do|execute)\b/i.test(prompt)) {
       return await handleRunCommand(prompt);
@@ -179,7 +197,7 @@ export async function codingAgent(prompt: string): Promise<string> {
       return await handleFindBugs(prompt);
     }
 
-    return await handleCreateProject(prompt);
+    return await handleCreateProject(prompt, history);
 
   } catch (err) {
     console.error("Coding agent error:", err);

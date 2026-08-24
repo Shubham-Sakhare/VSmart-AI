@@ -1,13 +1,10 @@
 import{
 LayoutGrid,
-Cpu,
 LineChart,
 ClipboardList,
 Calendar,
 MessageSquare,
-Library,
 Wrench,
-Workflow,
 Sparkles
 }from"lucide-react";
 import type{Page}from"./MainLayout";
@@ -21,15 +18,12 @@ label:string;
 // Every internal page that CAN show in the V-logo "VSmart Apps" panel.
 export const LAUNCHER_CATALOG:LauncherCatalogEntry[]=[
 {page:"dashboard",icon:<LayoutGrid size={22}/>,label:"Command Center"},
-{page:"aicore",icon:<Cpu size={22}/>,label:"AI Core"},
 {page:"agents",icon:<LineChart size={22}/>,label:"Analysis"},
 {page:"tasks",icon:<ClipboardList size={22}/>,label:"Tasks"},
 {page:"calendar",icon:<Calendar size={22}/>,label:"Calendar"},
 {page:"memory",icon:<Sparkles size={22}/>,label:"VSmart AI"},
 {page:"conversations",icon:<MessageSquare size={22}/>,label:"Conversations"},
-{page:"knowledge",icon:<Library size={22}/>,label:"Knowledge Base"},
-{page:"tools",icon:<Wrench size={22}/>,label:"Tools & Skills"},
-{page:"workflows",icon:<Workflow size={22}/>,label:"Workflows"}
+{page:"tools",icon:<Wrench size={22}/>,label:"Tools & Skills"}
 ];
 
 // Command Center is the home page - it always shows in the taskbar and can't

@@ -14,20 +14,17 @@ import ToolsPage from "../tools/ToolsPage";
 import ChatWidget from "../chat/ChatWidget";
 import { askVSmart } from "../../../core/aiEngine";
 import { useVoice, speak } from "../../voice/useVoice";
-import type { ReplyLang } from "../../../llm/openrouter";
+import type { ReplyLang, ChatHistoryMessage } from "../../../llm/openrouter";
 import "./layout.css";
 
 export type Page =
   | "dashboard"
-  | "aicore"
   | "agents"
   | "tasks"
   | "calendar"
   | "memory"
   | "conversations"
-  | "knowledge"
-  | "tools"
-  | "workflows";
+  | "tools";
 
 export interface Message {
   sender: "You" | "VSmart";
@@ -49,23 +46,20 @@ interface SidebarItem {
 
 const CONVERSATIONS_KEY = "chat_conversations";
 const SIDEBAR_KEY = "sidebar_settings";
+// How many prior messages (both sides) to send as context with each new
+// chat request — keeps the request small while still giving the model
+// enough short-term memory to resolve "iska", "wahi wala", follow-ups, etc.
+const MAX_HISTORY_MESSAGES = 10;
 
 const DEFAULT_SIDEBAR_ITEMS: SidebarItem[] = [
   { page: "dashboard", label: "Command Center", enabled: true },
-  { page: "aicore", label: "AI Core", enabled: true },
   { page: "agents", label: "Analysis", enabled: true },
   { page: "tasks", label: "Tasks", enabled: true },
   { page: "calendar", label: "Calendar", enabled: true },
   { page: "memory", label: "VSmart AI", enabled: true },
   { page: "conversations", label: "Conversations", enabled: true },
-  { page: "knowledge", label: "Knowledge Base", enabled: true },
-  { page: "tools", label: "Tools & Skills", enabled: true },
-  { page: "workflows", label: "Workflows", enabled: true }
+  { page: "tools", label: "Tools & Skills", enabled: true }
 ];
-
-function ComingSoon({ label }: { label: string }) {
-  return <div className="coming-soon">{label} — coming soon.</div>;
-}
 
 function makeTitle(messages: Message[]): string {
   const firstUserMsg = messages.find((m) => m.sender === "You");
@@ -221,7 +215,42 @@ export default function MainLayout() {
       })
     );
 
-    const result = await askVSmart(text, replyLang);
+    // Build history from the conversation as it was *before* this new
+    // message — the current activeConversation's messages, since the state
+    // update above is async and won't be visible yet.
+    const priorMessages = activeConversation?.messages ?? [];
+    const history: ChatHistoryMessage[] = priorMessages
+      .slice(-MAX_HISTORY_MESSAGES)
+      .map((m) => ({
+        role: m.sender === "You" ? ("user" as const) : ("assistant" as const),
+        content: m.text
+      }));
+
+    let result: Awaited<ReturnType<typeof askVSmart>>;
+    try {
+      result = await askVSmart(text, replyLang, history);
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        // This request was superseded by a newer message (or timed out) —
+        // stay silent, the newer request's reply is what the user cares about.
+        return;
+      }
+      const message =
+        err instanceof Error ? err.message : "Something went wrong. Please try again.";
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === convId
+            ? {
+                ...c,
+                messages: [...c.messages, { sender: "VSmart" as const, text: message }],
+                updatedAt: Date.now()
+              }
+            : c
+        )
+      );
+      return;
+    }
+
     const reply = result.message ?? "Done.";
 
     setConversations((prev) =>
@@ -265,8 +294,6 @@ export default function MainLayout() {
             voice={voice}
           />
         );
-      case "aicore":
-        return <ComingSoon label="AI Core" />;
       case "agents":
         return <AnalysisPage />;
       case "tasks":
@@ -275,12 +302,8 @@ export default function MainLayout() {
         return <CalendarPage />;
       case "memory":
         return <VSmartAIPage replyLang={replyLang} />;
-      case "knowledge":
-        return <ComingSoon label="Knowledge Base" />;
       case "tools":
         return <ToolsPage />;
-      case "workflows":
-        return <ComingSoon label="Workflows" />;
       default:
         return (
           <CommandCenter

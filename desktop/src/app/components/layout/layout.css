@@ -45,19 +45,6 @@ body[data-taskbar-pos="right"] .app-shell{
         radial-gradient(circle at top, var(--bg-panel) 0%, var(--bg-deep) 45%, var(--bg-deep) 100%);
 }
 
-.coming-soon{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    height:100%;
-    color:var(--text-dim);
-    opacity:.7;
-    padding:60px;
-    text-align:center;
-    font-size:16px;
-    letter-spacing:.3px;
-}
-
 /* ========== Chat Launcher ========== */
 .chat-launcher{
   position:fixed;
