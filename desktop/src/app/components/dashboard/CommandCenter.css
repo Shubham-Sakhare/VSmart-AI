@@ -1034,3 +1034,335 @@
         padding-top:12px;
     }
 }
+
+/* ===== Add these rules to CommandCenter.css (append at the end) ===== */
+
+/* ---- header: item count + sort toggle ---- */
+
+.hub-item-count{
+    font-size:10.5px;
+    font-weight:700;
+    color:var(--accent);
+    background:color-mix(in srgb, var(--accent) 14%, transparent);
+    border:1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    border-radius:10px;
+    padding:1px 8px;
+    flex-shrink:0;
+}
+
+.hub-sort-btn{
+    background:transparent;
+    border:1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+    color:var(--text-muted);
+    border-radius:8px;
+    width:28px;
+    height:28px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    transition:.2s;
+    flex-shrink:0;
+}
+
+.hub-sort-btn:hover{
+    background:color-mix(in srgb, var(--accent) 12%, transparent);
+    border-color:color-mix(in srgb, var(--accent) 50%, transparent);
+    color:var(--accent);
+}
+
+.hub-sort-btn.active{
+    color:var(--accent);
+    border-color:color-mix(in srgb, var(--accent) 45%, transparent);
+    background:color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+/* ---- search bar ---- */
+
+.hub-search-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+
+    margin:2px 0 12px;
+    padding:7px 12px;
+
+    border-radius:12px;
+    border:1px solid rgba(150,180,255,.14);
+    background:rgba(255,255,255,.035);
+
+    flex-shrink:0;
+    transition:border-color .2s, background .2s;
+}
+
+.hub-search-row:focus-within{
+    border-color:color-mix(in srgb, var(--accent) 45%, transparent);
+    background:rgba(255,255,255,.055);
+}
+
+.hub-search-icon{
+    color:#6f92a8;
+    flex-shrink:0;
+}
+
+.hub-search-input{
+    flex:1;
+    min-width:0;
+    background:transparent;
+    border:none;
+    outline:none;
+    font-size:12.5px;
+    color:#e8fbff;
+}
+
+.hub-search-input::placeholder{
+    color:#5f8aa0;
+}
+
+.hub-search-clear{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:18px;
+    height:18px;
+    border-radius:5px;
+    border:none;
+    background:rgba(255,255,255,.06);
+    color:#9fd6ea;
+    cursor:pointer;
+    flex-shrink:0;
+}
+
+.hub-search-clear:hover{
+    background:color-mix(in srgb, var(--accent) 20%, transparent);
+    color:var(--accent);
+}
+
+/* ---- "Desktop" label refresh timestamp ---- */
+
+.hub-refreshed-at{
+    font-weight:400;
+    text-transform:none;
+    letter-spacing:0;
+    color:#4c7488;
+    font-size:10px;
+    margin-left:4px;
+}
+
+/* ---- richer empty / loading / error states ---- */
+
+.tile-empty{
+    grid-column:1 / -1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    text-align:center;
+    font-size:12px;
+    color:#6a9aab;
+    padding:24px 0;
+}
+
+.tile-empty-loading{
+    color:var(--accent);
+}
+
+.tile-empty-error{
+    color:#ff9a9a;
+}
+
+.tile-empty-error button{
+    padding:5px 14px;
+    border-radius:8px;
+    border:1px solid rgba(255,120,120,.35);
+    background:rgba(255,80,80,.1);
+    color:#ff9a9a;
+    cursor:pointer;
+    font-size:11px;
+    transition:.2s;
+}
+
+.tile-empty-error button:hover{
+    background:rgba(255,80,80,.18);
+}
+
+/* ===== Append these to CommandCenter.css (after the previous additions) ===== */
+
+/* ---- skeleton loading tiles ---- */
+
+.skeleton-tile{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    padding:10px 4px 8px;
+    min-height:74px;
+}
+
+.skeleton-icon{
+    width:42px;
+    height:42px;
+    border-radius:12px;
+    background:linear-gradient(
+        100deg,
+        rgba(255,255,255,.04) 30%,
+        rgba(255,255,255,.11) 50%,
+        rgba(255,255,255,.04) 70%
+    );
+    background-size:200% 100%;
+    animation:skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.skeleton-line{
+    width:70%;
+    height:8px;
+    border-radius:4px;
+    background:linear-gradient(
+        100deg,
+        rgba(255,255,255,.03) 30%,
+        rgba(255,255,255,.08) 50%,
+        rgba(255,255,255,.03) 70%
+    );
+    background-size:200% 100%;
+    animation:skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer{
+    0%{ background-position:200% 0; }
+    100%{ background-position:-200% 0; }
+}
+
+.apps-list .skeleton-tile{
+    flex-direction:row;
+    justify-content:flex-start;
+    gap:12px;
+    min-height:44px;
+    padding:6px 8px;
+}
+
+.apps-list .skeleton-line{
+    width:40%;
+}
+
+/* ---- category grouping (list view) ---- */
+
+.apps-grouped-scroll{
+    flex:1;
+    min-height:0;
+    overflow-y:auto;
+    padding-right:2px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+}
+
+.hub-category-group .apps-grid-3{
+    overflow:visible;
+    flex:none;
+}
+
+.hub-category-title{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:10.5px;
+    font-weight:700;
+    letter-spacing:1.2px;
+    text-transform:uppercase;
+    color:#6f92a8;
+    margin:0 0 6px 2px;
+}
+
+.hub-category-count{
+    font-size:9.5px;
+    font-weight:600;
+    color:var(--accent);
+    background:color-mix(in srgb, var(--accent) 12%, transparent);
+    border-radius:8px;
+    padding:0 6px;
+}
+
+/* ---- icon-size zoom slider ---- */
+
+.hub-zoom-wrap{
+    position:relative;
+    flex-shrink:0;
+}
+
+.hub-zoom-popover{
+    position:absolute;
+    top:calc(100% + 8px);
+    right:0;
+    z-index:30;
+
+    display:flex;
+    align-items:center;
+    gap:8px;
+
+    padding:8px 12px;
+    min-width:140px;
+
+    border-radius:12px;
+    border:1px solid rgba(150,180,255,.25);
+    background:rgba(8,16,32,.92);
+    backdrop-filter:blur(14px);
+    box-shadow:0 10px 26px rgba(0,0,0,.4);
+
+    animation:card-in .15s ease;
+}
+
+.hub-zoom-popover input[type="range"]{
+    flex:1;
+    accent-color:var(--accent);
+    cursor:pointer;
+}
+
+.hub-zoom-value{
+    font-size:10.5px;
+    color:var(--accent);
+    min-width:32px;
+    text-align:right;
+}
+
+
+/* ===== Append to CommandCenter.css ===== */
+
+.feed-skeleton-list{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+}
+
+.feed-skeleton-item{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:8px 0;
+    border-bottom:1px solid rgba(255,255,255,.05);
+}
+
+.feed-skeleton-icon{
+    width:22px;
+    height:22px;
+    min-width:22px;
+    border-radius:6px;
+}
+
+.feed-skeleton-lines{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+}
+
+.feed-skeleton-line-wide{
+    width:65%;
+    height:9px;
+}
+
+.feed-skeleton-line-narrow{
+    width:35%;
+    height:7px;
+}

@@ -1,6 +1,49 @@
 export type ReplyLang = "en" | "hi";
 
+// One prior turn in the conversation, used to give the chat model real
+// short-term memory instead of treating every message as the first one.
+export interface ChatHistoryMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+// A single prior turn of the conversation, used to give the AI real
+// short-term memory (e.g. "give me an example of that" needs to know what
+// "that" refers to).
+export interface ChatHistoryMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+
+// Request timeout — if the API hangs (slow/dead connection), the request
+// gives up after this long instead of leaving the UI stuck forever.
+const REQUEST_TIMEOUT_MS = 30000;
+
+// Tracks the most recent in-flight chat/coder/vision request. When a new
+// request starts, the previous one is aborted first — so if the user sends
+// a second message before the first finishes, only the latest one's answer
+// ever reaches the UI, and the old request stops burning API quota/network.
+let activeController: AbortController | null = null;
+
+function startNewRequest(): AbortController {
+  if (activeController) {
+    activeController.abort();
+  }
+  const controller = new AbortController();
+  activeController = controller;
+  return controller;
+}
+
+function finishRequest(controller: AbortController): void {
+  // Only clear the shared reference if this call is still the active one —
+  // an older, already-superseded request finishing late shouldn't wipe out
+  // a newer request's controller.
+  if (activeController === controller) {
+    activeController = null;
+  }
+}
 
 const CHAT_MODELS = [
   "openai/gpt-oss-20b:free",
@@ -65,14 +108,19 @@ type MessageContent =
   | { type: "text"; text: string }[]
   | ({ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } })[];
 
-async function callOpenRouterWithContent(
+type ApiMessage = { role: "system" | "user" | "assistant"; content: MessageContent };
+
+// Low-level call: sends an already-built messages array (system + any prior
+// turns + the latest user message) to OpenRouter and returns the reply text.
+// Both the single-shot path (coder/vision, no history) and the multi-turn
+// chat path (with history) funnel through this one function.
+async function postChatCompletion(
   apiKey: string,
   model: string,
-  content: MessageContent,
-  lang: ReplyLang
+  messages: ApiMessage[]
 ): Promise<string> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30000);
+  const controller = startNewRequest();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
     console.log("Using model:", model);
     const response = await fetch(OPENROUTER_URL, {
@@ -86,19 +134,7 @@ async function callOpenRouterWithContent(
       },
       body: JSON.stringify({
         model,
-        messages: [
-          {
-            role: "system",
-            content:
-              `You are VSmart AI, a Jarvis-like assistant. ` +
-              languageInstruction(lang) +
-              " Keep replies short, direct and helpful. Only explain in detail if the user explicitly asks.",
-          },
-          {
-            role: "user",
-            content,
-          },
-        ],
+        messages,
         temperature: 0.7,
         max_tokens: 2048,
       }),
@@ -119,8 +155,62 @@ async function callOpenRouterWithContent(
     return answer.trim();
   } catch (err) {
     clearTimeout(timeout);
+    if (controller.signal.aborted) {
+      // Distinguish "cancelled because a newer message was sent" from a
+      // real network/timeout failure, so callers (and the UI) can choose to
+      // stay silent instead of showing an error for a superseded request.
+      throw new DOMException("Request superseded or timed out.", "AbortError");
+    }
     throw err;
+  } finally {
+    finishRequest(controller);
   }
+}
+
+async function callOpenRouterWithContent(
+  apiKey: string,
+  model: string,
+  content: MessageContent,
+  lang: ReplyLang
+): Promise<string> {
+  return postChatCompletion(apiKey, model, [
+    {
+      role: "system",
+      content:
+        `You are VSmart AI, a Jarvis-like assistant. ` +
+        languageInstruction(lang) +
+        " Keep replies short, direct and helpful. Only explain in detail if the user explicitly asks.",
+    },
+    {
+      role: "user",
+      content,
+    },
+  ]);
+}
+
+// Multi-turn chat: system prompt + prior conversation turns + the new user
+// message, so the model can resolve references like "iska example do" or
+// "us function ko test karo" against what was actually said earlier.
+async function callOpenRouterChat(
+  apiKey: string,
+  model: string,
+  history: ChatHistoryMessage[],
+  prompt: string,
+  lang: ReplyLang
+): Promise<string> {
+  const messages: ApiMessage[] = [
+    {
+      role: "system",
+      content:
+        `You are VSmart AI, a Jarvis-like assistant. ` +
+        languageInstruction(lang) +
+        " Keep replies short, direct and helpful. Only explain in detail if the user explicitly asks. " +
+        "Use the prior conversation turns for context when the user refers back to something earlier.",
+    },
+    ...history.map((h): ApiMessage => ({ role: h.role, content: h.content })),
+    { role: "user", content: prompt },
+  ];
+  return postChatCompletion(apiKey, model, messages);
 }
 
 async function callOpenRouterOnce(
@@ -146,6 +236,36 @@ async function callWithFallback(
     try {
       return await callOpenRouterOnce(apiKey, model, prompt, lang);
     } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        // A newer request superseded this one — stop trying more models,
+        // that answer will never reach the UI anyway.
+        throw err;
+      }
+      console.warn(`Model ${model} failed:`, err);
+      lastError = err;
+    }
+  }
+  throw lastError ?? new Error("All OpenRouter models failed.");
+}
+
+async function callWithChatFallback(
+  apiKey: string,
+  models: string[],
+  history: ChatHistoryMessage[],
+  prompt: string,
+  lang: ReplyLang
+): Promise<string> {
+  if (!apiKey) {
+    throw new Error("OpenRouter API Key missing.");
+  }
+  let lastError: unknown;
+  for (const model of models) {
+    try {
+      return await callOpenRouterChat(apiKey, model, history, prompt, lang);
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        throw err;
+      }
       console.warn(`Model ${model} failed:`, err);
       lastError = err;
     }
@@ -176,6 +296,9 @@ async function callWithVisionFallback(
         lang
       );
     } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        throw err;
+      }
       console.warn(`Vision model ${model} failed:`, err);
       lastError = err;
     }
@@ -185,10 +308,11 @@ async function callWithVisionFallback(
 
 export async function askHunyuan(
   prompt: string,
-  lang: ReplyLang = "en"
+  lang: ReplyLang = "en",
+  history: ChatHistoryMessage[] = []
 ): Promise<string> {
   const apiKey = await getApiKey();
-  return callWithFallback(apiKey, CHAT_MODELS, prompt, lang);
+  return callWithChatFallback(apiKey, CHAT_MODELS, history, prompt, lang);
 }
 
 export async function askQwenCoder(

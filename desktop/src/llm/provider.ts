@@ -1,12 +1,16 @@
-import { askHunyuan, askQwenCoder, isCodingPrompt, type ReplyLang } from "./openrouter";
+import { askHunyuan, askQwenCoder, isCodingPrompt, type ReplyLang, type ChatHistoryMessage } from "./openrouter";
 
 const provider =
   import.meta.env.VITE_AI_PROVIDER?.toLowerCase() ?? "auto";
 
-export async function askAI(prompt: string, lang: ReplyLang = "en"): Promise<string> {
+export async function askAI(
+  prompt: string,
+  lang: ReplyLang = "en",
+  history: ChatHistoryMessage[] = []
+): Promise<string> {
   switch (provider) {
     case "hunyuan":
-      return await askHunyuan(prompt, lang);
+      return await askHunyuan(prompt, lang, history);
 
     case "qwen":
       return await askQwenCoder(prompt, lang);
@@ -19,7 +23,7 @@ export async function askAI(prompt: string, lang: ReplyLang = "en"): Promise<str
 
       return useCoder
         ? await askQwenCoder(prompt, lang)
-        : await askHunyuan(prompt, lang);
+        : await askHunyuan(prompt, lang, history);
     }
   }
 }

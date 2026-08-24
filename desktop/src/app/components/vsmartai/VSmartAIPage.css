@@ -17,7 +17,7 @@
     z-index:0;
 }
 
-.vsai-history, .vsai-main{
+.vsai-history, .vsai-main, .vsai-side-panel{
     position:relative;
     z-index:1;
 }
@@ -321,6 +321,15 @@
     opacity:.85;
 }
 
+/* ---- action buttons row (copy / expand / edit) ---- */
+
+.vsai-bubble-btns{
+    display:flex;
+    align-items:center;
+    gap:4px;
+    margin-left:auto;
+}
+
 .vsai-copy-btn{
     display:flex;
     align-items:center;
@@ -335,7 +344,6 @@
     opacity:0;
     transition:.15s;
     flex-shrink:0;
-    margin-left:auto;
 }
 
 .vsai-bubble:hover .vsai-copy-btn{
@@ -346,6 +354,15 @@
     opacity:1 !important;
     background:rgba(var(--accent-rgb), .12);
     color:var(--accent);
+}
+
+.vsai-msg-row.user .vsai-copy-btn{
+    color:var(--text-on-accent);
+}
+
+.vsai-msg-row.user .vsai-copy-btn:hover{
+    background:rgba(0,0,0,.15);
+    color:var(--text-on-accent);
 }
 
 .vsai-bubble-time{
@@ -359,6 +376,53 @@
 
 .vsai-msg-row.ai .vsai-bubble-time{
     text-align:left;
+}
+
+/* ---- inline edit mode for user messages ---- */
+
+.vsai-bubble-edit{
+    background:var(--bg-panel) !important;
+    border:1px solid rgba(var(--accent-rgb), .5) !important;
+    color:var(--text-primary) !important;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+}
+
+.vsai-edit-textarea{
+    width:100%;
+    min-width:220px;
+    background:transparent;
+    border:none;
+    outline:none;
+    resize:none;
+    color:var(--text-primary);
+    font-size:14px;
+    font-family:inherit;
+    line-height:1.5;
+}
+
+.vsai-edit-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:6px;
+}
+
+.vsai-edit-actions button{
+    width:26px;
+    height:26px;
+    border-radius:6px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border:1px solid rgba(var(--accent-rgb), .3);
+    background:rgba(var(--accent-rgb), .1);
+    color:var(--accent);
+    cursor:pointer;
+}
+
+.vsai-edit-actions button:hover{
+    background:rgba(var(--accent-rgb), .2);
 }
 
 /* ---- Lightweight markdown rendering for AI replies ---- */
@@ -555,3 +619,79 @@
 .vsai-footer-note{
     opacity:.7;
 }
+
+/* ---------- Side panel for long AI results ---------- */
+
+.vsai-side-panel{
+    width:380px;
+    min-width:320px;
+    display:flex;
+    flex-direction:column;
+    background:var(--bg-panel);
+    border:1px solid rgba(var(--accent-rgb), .18);
+    border-radius:18px;
+    overflow:hidden;
+    backdrop-filter:blur(18px);
+    box-shadow:0 0 40px rgba(var(--accent-rgb), .1);
+    animation:vsai-panel-in .2s ease;
+}
+
+@keyframes vsai-panel-in{
+    from{ opacity:0; transform:translateX(12px); }
+    to{ opacity:1; transform:translateX(0); }
+}
+
+.vsai-side-panel-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:14px 16px;
+    font-size:12px;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    color:var(--accent);
+    border-bottom:1px solid rgba(var(--accent-rgb), .12);
+    background:rgba(var(--accent-rgb), .04);
+}
+
+.vsai-side-panel-actions{
+    display:flex;
+    gap:8px;
+}
+
+.vsai-side-panel-actions button{
+    width:26px;
+    height:26px;
+    border-radius:6px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border:1px solid rgba(var(--accent-rgb), .2);
+    background:rgba(var(--accent-rgb), .06);
+    color:var(--text-dim);
+    cursor:pointer;
+}
+
+.vsai-side-panel-actions button:hover{
+    background:rgba(var(--accent-rgb), .15);
+    color:var(--text-primary);
+}
+
+.vsai-side-panel-body{
+    flex:1;
+    overflow-y:auto;
+    padding:16px 18px;
+    font-size:13px;
+    line-height:1.65;
+    color:var(--text-primary);
+}
+
+.vsai-side-panel-body p{
+    margin:0 0 8px;
+    white-space:pre-wrap;
+    word-break:break-word;
+}
+
+.vsai-side-panel-body::-webkit-scrollbar{ width:8px; }
+.vsai-side-panel-body::-webkit-scrollbar-thumb{ background:var(--accent)44; border-radius:20px; }
+.vsai-side-panel-body::-webkit-scrollbar-track{ background:transparent; }

@@ -2,15 +2,12 @@ import { useEffect, useState } from "react";
 import "./sidebar.css";
 import {
   LayoutGrid,
-  Cpu,
   LineChart,
   ClipboardList,
   Calendar,
   Sparkles,
   MessageSquare,
-  Library,
   Wrench,
-  Workflow,
   Mic,
   Zap
 } from "lucide-react";
@@ -33,15 +30,12 @@ interface SidebarProps {
 
 const NAV_ITEMS: { page: Page; icon: React.ReactNode; label: string }[] = [
   { page: "dashboard", icon: <LayoutGrid size={19} />, label: "Command Center" },
-  { page: "aicore", icon: <Cpu size={19} />, label: "AI Core" },
   { page: "agents", icon: <LineChart size={19} />, label: "Analysis" },
   { page: "tasks", icon: <ClipboardList size={19} />, label: "Tasks" },
   { page: "calendar", icon: <Calendar size={19} />, label: "Calendar" },
   { page: "memory", icon: <Sparkles size={19} />, label: "VSmart AI" },
   { page: "conversations", icon: <MessageSquare size={19} />, label: "Conversations" },
-  { page: "knowledge", icon: <Library size={19} />, label: "Knowledge Base" },
-  { page: "tools", icon: <Wrench size={19} />, label: "Tools & Skills" },
-  { page: "workflows", icon: <Workflow size={19} />, label: "Workflows" }
+  { page: "tools", icon: <Wrench size={19} />, label: "Tools & Skills" }
 ];
 
 export default function Sidebar({

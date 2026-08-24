@@ -1,9 +1,10 @@
 import { askAI } from "../llm/provider";
-import type { ReplyLang } from "../llm/openrouter";
+import type { ReplyLang, ChatHistoryMessage } from "../llm/openrouter";
 
 export async function chatAgent(
   prompt: string,
-  lang: ReplyLang = "en"
+  lang: ReplyLang = "en",
+  history: ChatHistoryMessage[] = []
 ): Promise<string> {
 
   // Pull in any relevant long-term facts about the user (vector/TF-IDF
@@ -22,5 +23,5 @@ export async function chatAgent(
     // Memory search is best-effort — if it fails, just chat normally.
   }
 
-  return await askAI(context + prompt, lang);
+  return await askAI(context + prompt, lang, history);
 }

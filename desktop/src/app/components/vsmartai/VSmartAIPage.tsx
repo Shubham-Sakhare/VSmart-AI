@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Sparkles, Send, Paperclip, ImageIcon, Lightbulb, ListChecks,
-  Plus, Trash2, MessageSquare, X, Copy, Check
+  Plus, Trash2, MessageSquare, X, Copy, Check, Pencil, Maximize2
 } from "lucide-react";
 import { askAI } from "../../../llm/provider";
-import type { ReplyLang } from "../../../llm/openrouter";
+import type { ReplyLang, ChatHistoryMessage } from "../../../llm/openrouter";
 import { renderLiteMarkdown } from "./MarkdownLite";
 import "./VSmartAIPage.css";
 
@@ -24,11 +24,43 @@ interface ChatSession {
 
 const STORAGE_KEY = "vsai_sessions";
 
+// AI replies longer than this get a "expand" button that opens the side panel.
+const LONG_RESULT_THRESHOLD = 600;
+
 const QUICK_ACTIONS = [
   { label: "Create Image", icon: <ImageIcon size={14} />, prompt: "Describe how I could create an image of " },
   { label: "Brainstorm", icon: <Lightbulb size={14} />, prompt: "Help me brainstorm ideas for " },
   { label: "Make a plan", icon: <ListChecks size={14} />, prompt: "Help me make a plan for " }
 ];
+
+// Robust clipboard copy — Electron renderers sometimes run without a
+// "secure context" (no https), which makes navigator.clipboard undefined
+// or reject silently. Fall back to a hidden textarea + execCommand so
+// copy always works regardless of that.
+async function copyText(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+    throw new Error("clipboard api unavailable");
+  } catch {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+}
 
 export default function VSmartAIPage({ replyLang = "en" }: { replyLang?: ReplyLang }) {
 
@@ -39,6 +71,15 @@ export default function VSmartAIPage({ replyLang = "en" }: { replyLang?: ReplyLa
   const [attachedFile, setAttachedFile] = useState<{ name: string; content: string } | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // edit & resend
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState("");
+  const editInputRef = useRef<HTMLTextAreaElement>(null);
+
+  // side panel for long AI results
+  const [panelMsg, setPanelMsg] = useState<ChatMessage | null>(null);
+  const [panelCopied, setPanelCopied] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -70,10 +111,19 @@ export default function VSmartAIPage({ replyLang = "en" }: { replyLang?: ReplyLa
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
   }, [messages, loading]);
 
+  useEffect(() => {
+    if (editingId !== null) {
+      editInputRef.current?.focus();
+      editInputRef.current?.select();
+    }
+  }, [editingId]);
+
   const startNewChat = () => {
     setActiveId(null);
     setInput("");
     setAttachedFile(null);
+    setPanelMsg(null);
+    cancelEdit();
   };
 
   const deleteSession = (id: string, e: React.MouseEvent) => {
@@ -85,13 +135,39 @@ export default function VSmartAIPage({ replyLang = "en" }: { replyLang?: ReplyLa
   const handleFilePick = () => fileInputRef.current?.click();
 
   const copyMessage = async (msg: ChatMessage) => {
-    try {
-      await navigator.clipboard.writeText(msg.text);
+    const ok = await copyText(msg.text);
+    if (ok) {
       setCopiedId(msg.id);
       setTimeout(() => setCopiedId((prev) => (prev === msg.id ? null : prev)), 1500);
-    } catch {
-      // clipboard unavailable — ignore silently
     }
+  };
+
+  const copyPanel = async () => {
+    if (!panelMsg) return;
+    const ok = await copyText(panelMsg.text);
+    if (ok) {
+      setPanelCopied(true);
+      setTimeout(() => setPanelCopied(false), 1500);
+    }
+  };
+
+  // ----- edit & resend (only for "You" messages) -----
+  const startEdit = (msg: ChatMessage) => {
+    setEditingId(msg.id);
+    setEditingText(msg.text);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditingText("");
+  };
+
+  const confirmEdit = () => {
+    const trimmed = editingText.trim();
+    if (!trimmed) return;
+    setEditingId(null);
+    setEditingText("");
+    send(trimmed);
   };
 
   const formatTime = (ts: number) =>
@@ -141,18 +217,38 @@ export default function VSmartAIPage({ replyLang = "en" }: { replyLang?: ReplyLa
       ));
     }
 
+    // Build history from the session as it was *before* this new message
+    // (the setSessions calls above are async, so `messages`/`activeSession`
+    // still reflect the prior state here).
+    const priorMessages = activeSession?.messages ?? [];
+    const history: ChatHistoryMessage[] = priorMessages
+      .slice(-10)
+      .map((m) => ({
+        role: m.sender === "You" ? ("user" as const) : ("assistant" as const),
+        content: m.text
+      }));
+
     setInput("");
     setAttachedFile(null);
     setLoading(true);
 
     try {
-      const reply = await askAI(promptForAI, replyLang);
+      const reply = await askAI(promptForAI, replyLang, history);
       const aiMsg: ChatMessage = { id: `${Date.now()}-a`, sender: "VSmart", text: reply, ts: Date.now() };
       setSessions(prev => prev.map(s =>
         s.id === sessionId ? { ...s, messages: [...s.messages, aiMsg], updatedAt: Date.now() } : s
       ));
-    } catch {
-      const aiMsg: ChatMessage = { id: `${Date.now()}-a`, sender: "VSmart", text: "Something went wrong reaching the AI. Please check the API key/connection and try again.", ts: Date.now() };
+    } catch (err) {
+      // Show the real reason instead of a generic message — rate limits,
+      // timeouts, and missing API keys all need different fixes from the
+      // user, so swallowing the error made every failure look the same.
+      const reason = err instanceof Error ? err.message : "Unknown error.";
+      const aiMsg: ChatMessage = {
+        id: `${Date.now()}-a`,
+        sender: "VSmart",
+        text: `Something went wrong reaching the AI: ${reason}`,
+        ts: Date.now()
+      };
       setSessions(prev => prev.map(s =>
         s.id === sessionId ? { ...s, messages: [...s.messages, aiMsg], updatedAt: Date.now() } : s
       ));
@@ -215,30 +311,86 @@ export default function VSmartAIPage({ replyLang = "en" }: { replyLang?: ReplyLa
         ) : (
 
           <div className="vsai-messages">
-            {messages.map(m => (
-              <div key={m.id} className={m.sender === "You" ? "vsai-msg-row user" : "vsai-msg-row ai"}>
-                {m.sender === "VSmart" && (
-                  <div className="vsai-avatar"><Sparkles size={14} /></div>
-                )}
-                <div className="vsai-bubble">
-                  <div className="vsai-bubble-top">
-                    {m.sender === "VSmart" && <span className="vsai-bubble-sender">VSmart</span>}
-                    {m.sender === "VSmart" && (
-                      <button
-                        type="button"
-                        className="vsai-copy-btn"
-                        title="Copy message"
-                        onClick={() => copyMessage(m)}
-                      >
-                        {copiedId === m.id ? <Check size={12} /> : <Copy size={12} />}
-                      </button>
-                    )}
-                  </div>
-                  {m.sender === "VSmart" ? renderLiteMarkdown(m.text) : <p>{m.text}</p>}
-                  <span className="vsai-bubble-time">{formatTime(m.ts)}</span>
+            {messages.map(m => {
+              const isUser = m.sender === "You";
+              const isEditingThis = editingId === m.id;
+              const isLong = !isUser && m.text.length > LONG_RESULT_THRESHOLD;
+
+              return (
+                <div key={m.id} className={isUser ? "vsai-msg-row user" : "vsai-msg-row ai"}>
+                  {m.sender === "VSmart" && (
+                    <div className="vsai-avatar"><Sparkles size={14} /></div>
+                  )}
+
+                  {isEditingThis ? (
+                    <div className="vsai-bubble vsai-bubble-edit">
+                      <textarea
+                        ref={editInputRef}
+                        className="vsai-edit-textarea"
+                        value={editingText}
+                        onChange={(e) => setEditingText(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            confirmEdit();
+                          }
+                          if (e.key === "Escape") cancelEdit();
+                        }}
+                        rows={2}
+                      />
+                      <div className="vsai-edit-actions">
+                        <button onClick={confirmEdit} title="Send edited message">
+                          <Send size={13} />
+                        </button>
+                        <button onClick={cancelEdit} title="Cancel edit">
+                          <X size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="vsai-bubble">
+                      <div className="vsai-bubble-top">
+                        {m.sender === "VSmart" && <span className="vsai-bubble-sender">VSmart</span>}
+                        <div className="vsai-bubble-btns">
+                          {isLong && (
+                            <button
+                              type="button"
+                              className="vsai-copy-btn"
+                              title="Open full result in side panel"
+                              onClick={() => setPanelMsg(m)}
+                            >
+                              <Maximize2 size={12} />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="vsai-copy-btn"
+                            title="Copy message"
+                            onClick={() => copyMessage(m)}
+                          >
+                            {copiedId === m.id ? <Check size={12} /> : <Copy size={12} />}
+                          </button>
+                          {isUser && (
+                            <button
+                              type="button"
+                              className="vsai-copy-btn"
+                              title="Edit & resend"
+                              onClick={() => startEdit(m)}
+                            >
+                              <Pencil size={12} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      {m.sender === "VSmart"
+                        ? renderLiteMarkdown(isLong ? `${m.text.slice(0, LONG_RESULT_THRESHOLD)}…` : m.text)
+                        : <p>{m.text}</p>}
+                      <span className="vsai-bubble-time">{formatTime(m.ts)}</span>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {loading && (
               <div className="vsai-msg-row ai">
@@ -306,6 +458,26 @@ export default function VSmartAIPage({ replyLang = "en" }: { replyLang?: ReplyLa
         </div>
 
       </div>
+
+      {/* Side panel for long AI results */}
+      {panelMsg && (
+        <div className="vsai-side-panel">
+          <div className="vsai-side-panel-header">
+            <span>Full Result</span>
+            <div className="vsai-side-panel-actions">
+              <button onClick={copyPanel} title="Copy full result">
+                {panelCopied ? <Check size={14} /> : <Copy size={14} />}
+              </button>
+              <button onClick={() => setPanelMsg(null)} title="Close panel">
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+          <div className="vsai-side-panel-body">
+            {renderLiteMarkdown(panelMsg.text)}
+          </div>
+        </div>
+      )}
 
     </div>
   );
